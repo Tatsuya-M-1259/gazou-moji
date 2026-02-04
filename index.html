@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Amakusa Creative AI - Multi Select</title>
+    <title>Amakusa Creative AI - Fixed</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
@@ -17,7 +17,7 @@
             <h1 class="text-lg font-bold tracking-tight text-white">Amakusa <span class="text-emerald-400">Creative AI</span></h1>
         </div>
         <div class="flex gap-3">
-            <button id="downloadBtn" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-6 py-2 rounded-full text-sm font-black transition-all flex items-center gap-2 shadow-xl shadow-emerald-500/10 active:scale-95">
+            <button id="downloadBtn" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-6 py-2 rounded-full text-sm font-black transition-all flex items-center gap-2 active:scale-95">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                 高画質で保存
             </button>
@@ -34,41 +34,41 @@
         </aside>
 
         <section class="flex-1 bg-slate-950 relative flex items-center justify-center p-4">
-            <div id="canvas-container" class="shadow-[0_0_100px_rgba(0,0,0,0.5)] border border-slate-800">
+            <div id="canvas-container" class="shadow-2xl border border-slate-800 bg-black">
                 <canvas id="mainCanvas"></canvas>
             </div>
         </section>
 
         <aside class="w-80 border-l border-slate-800 bg-slate-900/50 p-6 overflow-y-auto">
-            <button id="deleteObj" class="w-full bg-red-500/10 text-red-400 py-3 rounded-xl text-[11px] font-black mb-8 border border-red-500/20 hover:bg-red-500/20 hidden">選択アイテムを削除</button>
+            <button id="deleteObj" class="w-full bg-red-500/10 text-red-400 py-3 rounded-xl text-[11px] font-black mb-8 border border-red-500/20 hidden">選択アイテムを削除</button>
 
             <div id="panel-ai" class="panel-content">
                 <h2 class="panel-title">Free AI Generation</h2>
-                <textarea id="aiPrompt" class="input-field h-32 mb-4" placeholder="例: Amakusa sunset, futuristic boat..."></textarea>
+                <textarea id="aiPrompt" class="input-field h-32 mb-4" placeholder="例: 夕陽の天草、ジャンプするイルカ..."></textarea>
                 <button id="generateBtn" class="btn-primary flex justify-center items-center gap-2">
                     <span id="genText">無料で4枚生成する</span>
                     <div id="genLoader" class="hidden w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></div>
                 </button>
                 
-                <div id="thumbnailContainer" class="grid grid-cols-2 gap-2 mt-6 hidden">
+                <div id="thumbnailContainer" class="grid grid-cols-2 gap-3 mt-6">
                     </div>
-                <p id="selectHint" class="text-[10px] text-emerald-500 mt-2 italic hidden text-center">画像をクリックしてキャンバスに追加</p>
+                <p id="selectHint" class="text-[10px] text-emerald-500 mt-4 italic hidden text-center font-bold">画像をタップしてキャンバスに追加</p>
             </div>
 
             <div id="panel-text" class="panel-content hidden">
                 <h2 class="panel-title">Typography</h2>
                 <button id="addTextBtn" class="btn-outline mb-6 text-xs py-3 font-bold">+ テキスト追加</button>
-                <div class="space-y-4">
-                    <label class="label">フォント</label>
+                <div class="space-y-4 text-xs font-bold text-slate-400">
+                    <label>フォント</label>
                     <select id="fontFamily" class="input-field py-2">
                         <option value="Inter">Modern</option>
                         <option value="Noto Sans JP">Standard</option>
                         <option value="serif">Elegant</option>
                     </select>
-                    <label class="label">サイズ</label>
-                    <input type="range" id="fontSize" min="10" max="500" value="100" class="w-full accent-emerald-500">
-                    <label class="label">カラー</label>
-                    <input type="color" id="textColor" value="#ffffff" class="w-full h-10 bg-slate-800 border-none rounded-xl cursor-pointer">
+                    <label>サイズ</label>
+                    <input type="range" id="fontSize" min="10" max="800" value="120" class="w-full accent-emerald-500">
+                    <label>カラー</label>
+                    <input type="color" id="textColor" value="#ffffff" class="w-full h-12 bg-slate-800 border-none rounded-xl cursor-pointer p-1">
                 </div>
             </div>
         </aside>
