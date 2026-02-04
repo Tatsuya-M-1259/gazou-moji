@@ -1,5 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. キャンバスの初期化 (Instagram基準 1080x1080)
+    // 定数
+    const API_KEY_STORAGE_KEY = 'amakusa_creative_gemini_api_key';
+
+    // 1. キャンバス初期化
     const canvas = new fabric.Canvas('mainCanvas', {
         width: 1080,
         height: 1080,
@@ -7,28 +10,43 @@ document.addEventListener('DOMContentLoaded', () => {
         preserveObjectStacking: true
     });
 
-    // プレビューの自動スケール調整
-    function updatePreviewScale() {
+    function resizePreview() {
         const container = document.getElementById('canvas-container');
         const parent = container.parentElement;
-        const padding = 64;
-        const scale = Math.min(
-            (parent.clientWidth - padding) / 1080,
-            (parent.clientHeight - padding) / 1080
-        );
+        const scale = Math.min((parent.clientWidth - 60) / 1080, (parent.clientHeight - 60) / 1080);
         container.style.transform = `scale(${scale})`;
     }
-    window.addEventListener('resize', updatePreviewScale);
-    updatePreviewScale();
+    window.addEventListener('resize', resizePreview);
+    resizePreview();
 
-    // 2. サイドバーのツール切替
+    // --- 自動保存機能 ---
+    const apiKeyInput = document.getElementById('geminiApiKey');
+    const apiKeyStatus = document.getElementById('apiKeyStatus');
+
+    // 保存されているキーを読み込み
+    const savedKey = localStorage.getItem(API_KEY_STORAGE_KEY);
+    if (savedKey) {
+        apiKeyInput.value = savedKey;
+        apiKeyStatus.classList.remove('hidden');
+    }
+
+    // 入力されるたびに自動保存
+    apiKeyInput.addEventListener('input', (e) => {
+        const key = e.target.value.trim();
+        if (key) {
+            localStorage.setItem(API_KEY_STORAGE_KEY, key);
+            apiKeyStatus.classList.remove('hidden');
+        } else {
+            localStorage.removeItem(API_KEY_STORAGE_KEY);
+            apiKeyStatus.classList.add('hidden');
+        }
+    });
+
+    // 2. ツール切替
     document.querySelectorAll('.tool-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const tool = btn.dataset.tool;
-            if (tool === 'upload') {
-                document.getElementById('imageUpload').click();
-                return;
-            }
+            if (tool === 'upload') { document.getElementById('imageUpload').click(); return; }
             document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             document.querySelectorAll('.panel-content').forEach(p => p.classList.add('hidden'));
@@ -36,13 +54,35 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // --- 自動翻訳ロジック ---
+    async function translatePrompt(text, key) {
+        // 日本語が含まれていない場合はそのまま返す
+        if (!/[ぁ-んァ-ン一-龠]/.test(text)) return text;
+
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: `Translate the following image prompt into professional, descriptive English for an image generation AI. Output ONLY the translated text: ${text}` }] }]
+                })
+            });
+            const data = await response.json();
+            return data.candidates[0].content.parts[0].text.trim();
+        } catch (e) {
+            console.error("Translation Error:", e);
+            return text; // 失敗時は元のテキストを使用
+        }
+    }
+
     // 3. Gemini Imagen 3 画像生成
     document.getElementById('generateBtn').addEventListener('click', async () => {
-        const prompt = document.getElementById('aiPrompt').value.trim();
-        const apiKey = document.getElementById('geminiApiKey').value.trim();
+        const rawPrompt = document.getElementById('aiPrompt').value.trim();
+        const apiKey = apiKeyInput.value.trim();
 
         if (!apiKey) return showToast("APIキーを入力してください");
-        if (!prompt) return showToast("プロンプトを入力してください");
+        if (!rawPrompt) return showToast("プロンプトを入力してください");
 
         const btn = document.getElementById('generateBtn');
         const loader = document.getElementById('genLoader');
@@ -50,22 +90,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
         btn.disabled = true;
         loader.classList.remove('hidden');
-        textLabel.innerText = "Geminiが生成中...";
+        textLabel.innerText = "Geminiが翻訳中...";
 
         try {
-            // Imagen 3 API Call (v1beta エンドポイント想定)
-            const MODEL_NAME = 'imagen-3.0-generate-001';
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:predict?key=${apiKey}`;
+            // 自動翻訳の実行
+            const finalPrompt = await translatePrompt(rawPrompt, apiKey);
+            textLabel.innerText = "Geminiが生成中...";
 
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${apiKey}`;
             const response = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    instances: [{ prompt: prompt }],
-                    parameters: {
-                        sampleCount: 1,
-                        aspectRatio: "1:1"
-                    }
+                    instances: [{ prompt: finalPrompt }],
+                    parameters: { sampleCount: 1, aspectRatio: "1:1" }
                 })
             });
 
@@ -80,12 +118,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     resetGenUI();
                 }, { crossOrigin: 'anonymous' });
             } else {
-                console.error("Gemini Error:", data);
-                showToast("生成エラー。制限等を確認してください。");
+                showToast("生成に失敗しました");
                 resetGenUI();
             }
-        } catch (error) {
-            console.error(error);
+        } catch (e) {
             showToast("接続エラーが発生しました");
             resetGenUI();
         }
@@ -112,7 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
         reader.readAsDataURL(file);
     });
 
-    // 5. テキスト編集 & 同期
+    // 5. テキスト編集
     document.getElementById('addTextBtn').addEventListener('click', () => {
         const text = new fabric.IText('Text Here', {
             left: 200, top: 200, fontFamily: 'Inter',
@@ -122,7 +158,6 @@ document.addEventListener('DOMContentLoaded', () => {
         canvas.add(text).setActiveObject(text);
     });
 
-    // 選択時にパネルの値を反映
     canvas.on('selection:created', (e) => syncUI(e.selected[0]));
     canvas.on('selection:updated', (e) => syncUI(e.selected[0]));
     canvas.on('selection:cleared', () => document.getElementById('deleteObj').classList.add('hidden'));
@@ -136,7 +171,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // パネルからオブジェクトへ反映
     document.getElementById('fontSize').oninput = (e) => {
         const o = canvas.getActiveObject();
         if (o) { o.set('fontSize', parseInt(e.target.value)); canvas.renderAll(); }
@@ -150,12 +184,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (o) { o.set('fontFamily', e.target.value); canvas.renderAll(); }
     };
 
-    // 6. レイヤー・削除操作
     document.getElementById('bringForward').onclick = () => { const o = canvas.getActiveObject(); if(o){ canvas.bringForward(o); canvas.renderAll(); } };
     document.getElementById('sendBackward').onclick = () => { const o = canvas.getActiveObject(); if(o){ canvas.sendBackwards(o); canvas.renderAll(); } };
     document.getElementById('deleteObj').onclick = () => { const o = canvas.getActiveObject(); if(o){ canvas.remove(o); canvas.discardActiveObject(); canvas.renderAll(); } };
 
-    // 7. スタンプ (絵文字)
+    // 6. スタンプ
     const stamps = ['✨', '🔥', '👑', '💖', '📍', '🌈', '⚡', '💬', '🚀', '💯', '🎨', '📸'];
     const stampList = document.getElementById('stampList');
     stamps.forEach(s => {
@@ -169,7 +202,7 @@ document.addEventListener('DOMContentLoaded', () => {
         stampList.appendChild(btn);
     });
 
-    // 8. フィルタ機能
+    // 7. フィルタ & トリミング
     document.querySelectorAll('.filter-btn').forEach(btn => {
         btn.onclick = () => {
             const img = canvas.getActiveObject();
@@ -184,7 +217,6 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     });
 
-    // 9. クロッピング (簡易実装: 70%中央切り抜き)
     document.getElementById('cropBtn').onclick = () => {
         const img = canvas.getActiveObject();
         if (!img || img.type !== 'image') return showToast("画像を選択してください");
@@ -196,19 +228,18 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast("中央をトリミングしました");
     };
 
-    // 10. キャンバス背景色
     document.getElementById('canvasBgColor').oninput = (e) => {
         canvas.setBackgroundColor(e.target.value, canvas.renderAll.bind(canvas));
     };
 
-    // 11. 書き出し (高解像度 2x)
+    // 8. 書き出し
     document.getElementById('downloadBtn').onclick = () => {
         showToast("保存用データを生成中...");
         const url = canvas.toDataURL({ format: 'png', multiplier: 2 });
-        const link = document.createElement('a');
-        link.download = `Creative-AI-Pro-${Date.now()}.png`;
-        link.href = url;
-        link.click();
+        const a = document.createElement('a');
+        a.download = `Creative-AI-Pro-${Date.now()}.png`;
+        a.href = url;
+        a.click();
     };
 
     function showToast(msg) {
