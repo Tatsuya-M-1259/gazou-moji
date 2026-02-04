@@ -52,7 +52,7 @@
                     <span id="genText">無料で画像を生成する</span>
                     <div id="genLoader" class="hidden w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></div>
                 </button>
-                <p class="text-[10px] text-slate-500 mt-4 leading-relaxed italic">※APIキー不要でご利用いただけます。英語での入力がおすすめです。</p>
+                <p class="text-[10px] text-slate-500 mt-4 leading-relaxed italic">※APIキー不要。日本語入力も自動対応（英語推奨）。</p>
             </div>
 
             <div id="panel-text" class="panel-content hidden">
@@ -60,7 +60,7 @@
                 <button id="addTextBtn" class="btn-outline mb-8 text-xs py-3 font-bold">+ 新しいテキスト</button>
                 <div class="space-y-6">
                     <div>
-                        <label class="label">フォント</label>
+                        <label class="label">フォントスタイル</label>
                         <select id="fontFamily" class="input-field py-3">
                             <option value="Inter">Modern (Inter)</option>
                             <option value="Noto Sans JP">Standard (Noto)</option>
@@ -83,7 +83,7 @@
             </div>
 
             <div id="panel-stamp" class="panel-content hidden">
-                <h2 class="panel-title">Stamps</h2>
+                <h2 class="panel-title">Icon Stamps</h2>
                 <div class="grid grid-cols-4 gap-3" id="stampList"></div>
             </div>
 
@@ -94,6 +94,10 @@
                     <button class="filter-btn" data-filter="Sepia">セピア</button>
                     <button class="filter-btn" data-filter="Invert">反転</button>
                     <button class="filter-btn" data-filter="none">リセット</button>
+                </div>
+                <div class="mt-10 border-t border-slate-800 pt-8">
+                    <h2 class="panel-title">Advanced</h2>
+                    <button id="cropBtn" class="btn-outline text-[10px] py-4 tracking-widest font-black uppercase">中央で切り抜き</button>
                 </div>
             </div>
         </aside>
