@@ -18,7 +18,7 @@
         </div>
         <div class="flex gap-3">
             <button id="downloadBtn" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-6 py-2 rounded-full text-sm font-black transition-all flex items-center gap-2 shadow-xl shadow-emerald-500/10 active:scale-95">
-                高画質で保存
+                保存する
             </button>
         </div>
     </header>
@@ -42,23 +42,23 @@
             <button id="deleteObj" class="w-full bg-red-500/10 text-red-400 py-3 rounded-xl text-[11px] font-black mb-8 border border-red-500/20 hidden">選択中アイテムを削除</button>
 
             <div id="panel-ai" class="panel-content">
-                <h2 class="panel-title">Gemini AI Image</h2>
+                <h2 class="panel-title">Gemini 3 & Imagen 4</h2>
                 <div class="mb-6">
                     <div class="flex justify-between items-end mb-2">
                         <label class="label">Gemini API Key</label>
                         <button id="clearApiKey" class="text-[9px] text-red-400 hover:underline">鍵をリセット</button>
                     </div>
-                    <input type="password" id="geminiApiKey" class="input-field py-2 font-mono text-xs" placeholder="APIキーを入力してください">
-                    <p id="apiKeyStatus" class="text-[9px] text-emerald-500 mt-1 italic hidden">✓ キーはブラウザに保存されています</p>
+                    <input type="password" id="geminiApiKey" class="input-field py-2 font-mono text-xs" placeholder="APIキーを入力">
+                    <p id="apiKeyStatus" class="text-[9px] text-emerald-500 mt-1 italic hidden">✓ キーは保存されています</p>
                 </div>
                 
                 <div class="relative">
-                    <label class="label text-white">画像生成プロンプト</label>
-                    <textarea id="aiPrompt" class="input-field h-40 text-white placeholder-slate-600" placeholder="例: 夕陽を背景にした静かな海の風景..."></textarea>
+                    <label class="label text-white">画像生成プロンプト (日本語OK)</label>
+                    <textarea id="aiPrompt" class="input-field h-40 text-white placeholder-slate-600" placeholder="例: 天草の美しい夕陽、サイバーパンクな港町..."></textarea>
                 </div>
                 
                 <button id="generateBtn" class="btn-primary mt-4 flex justify-center items-center gap-2">
-                    <span id="genText">Imagen 3 で生成する</span>
+                    <span id="genText">Imagen 4 で生成する</span>
                     <div id="genLoader" class="hidden w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></div>
                 </button>
                 
