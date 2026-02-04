@@ -1,157 +1,120 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const CANVAS_SIZE = 1080;
+    const SIZE = 1080;
 
-    // 1. キャンバスの物理サイズを1080pxに固定
+    // 1. キャンバス初期化 (物理サイズを1080pxで固定)
     const canvas = new fabric.Canvas('mainCanvas', {
-        width: CANVAS_SIZE,
-        height: CANVAS_SIZE,
-        backgroundColor: '#0f172a',
+        width: SIZE,
+        height: SIZE,
+        backgroundColor: '#000',
         preserveObjectStacking: true
     });
 
-    // 画面サイズに合わせて縮小表示する（ズーム）
-    function fitCanvasToScreen() {
-        const frame = document.getElementById('canvas-fixed-frame');
-        const parent = frame.parentElement;
-        const scale = Math.min((parent.clientWidth - 40) / CANVAS_SIZE, (parent.clientHeight - 40) / CANVAS_SIZE);
-        frame.style.transform = `scale(${scale})`;
+    // ビューポートのスケール調整（画面に合わせる）
+    function rescale() {
+        const vp = document.getElementById('canvas-viewport');
+        const parent = vp.parentElement;
+        const scale = Math.min((parent.clientWidth - 64) / SIZE, (parent.clientHeight - 64) / SIZE);
+        vp.style.transform = `scale(${scale})`;
     }
-    window.addEventListener('resize', fitCanvasToScreen);
-    fitCanvasToScreen();
+    window.addEventListener('resize', rescale);
+    rescale();
 
-    // 2. 画像の完全読み込みを保証するPromise関数
-    const loadImageAsync = (url) => {
-        return new Promise((resolve, reject) => {
-            const img = new Image();
-            img.crossOrigin = "anonymous";
-            img.onload = () => resolve(img);
-            img.onerror = reject;
-            img.src = url;
-        });
-    };
+    // 2. 画像生成 (4枚作成)
+    const grid = document.getElementById('thumbGrid');
+    const loader = document.getElementById('loader');
 
-    // 3. 無料4枚生成
-    const thumbContainer = document.getElementById('thumbnailContainer');
-
-    document.getElementById('generateBtn').onclick = async () => {
+    document.getElementById('generateBtn').onclick = () => {
         const prompt = document.getElementById('aiPrompt').value.trim();
-        if (!prompt) return showToast("プロンプトを入力してください");
+        if (!prompt) return;
 
-        const btn = document.getElementById('generateBtn');
-        btn.disabled = true;
-        document.getElementById('genLoader').classList.remove('hidden');
-        thumbContainer.innerHTML = '';
+        loader.classList.remove('hidden');
+        grid.innerHTML = '';
 
+        // 4枚の画像を生成して表示
         for (let i = 0; i < 4; i++) {
-            const seed = Math.floor(Math.random() * 1000000);
+            const seed = Math.floor(Math.random() * 100000);
             const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1080&height=1080&nologo=true&seed=${seed}`;
             
-            const box = document.createElement('div');
-            box.className = "thumb-box animate-pulse";
+            const img = new Image();
+            img.src = url;
+            img.className = "thumb-img";
+            img.onload = () => {
+                if (i === 3) loader.classList.add('hidden'); // 最後の画像が読み込まれたら消す
+            };
             
-            // 非同期で画像をロード
-            loadImageAsync(url).then(imgElement => {
-                box.classList.remove('animate-pulse');
-                box.appendChild(imgElement);
-                
-                // クリックでキャンバスに追加
-                box.onclick = () => {
-                    const fImg = new fabric.Image(imgElement, {
+            // クリックでメインキャンバスに「投影」
+            img.onclick = () => {
+                // 通信エラーを避けるため、すでにロード済みのimgを利用
+                fabric.Image.fromURL(url, (fImg) => {
+                    // キャンバス全体に広がるように調整
+                    const scale = Math.max(SIZE / fImg.width, SIZE / fImg.height);
+                    fImg.set({
+                        scaleX: scale,
+                        scaleY: scale,
                         originX: 'center',
                         originY: 'center',
-                        left: CANVAS_SIZE / 2,
-                        top: CANVAS_SIZE / 2
+                        left: SIZE / 2,
+                        top: SIZE / 2,
+                        selectable: true
                     });
-                    
-                    // キャンバスの幅(1080)に最大フィットさせる
-                    const ratio = Math.min(CANVAS_SIZE / fImg.width, CANVAS_SIZE / fImg.height);
-                    fImg.set({ scaleX: ratio, scaleY: ratio });
-                    
                     canvas.add(fImg);
-                    fImg.setCoords();
                     canvas.setActiveObject(fImg);
                     canvas.renderAll();
-                    showToast("キャンバスに追加しました");
-                };
-            }).catch(() => {
-                box.innerHTML = "<span class='text-[8px] text-red-500'>Error</span>";
-            });
-
-            thumbContainer.appendChild(box);
+                }, { crossOrigin: 'anonymous' });
+            };
+            grid.appendChild(img);
         }
-
-        btn.disabled = false;
-        document.getElementById('genLoader').classList.add('hidden');
     };
 
-    // 4. 画像アップロード
-    document.getElementById('imageUpload').onchange = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = async (f) => {
-            const imgEl = await loadImageAsync(f.target.result);
-            const fImg = new fabric.Image(imgEl, {
-                originX: 'center', originY: 'center',
-                left: CANVAS_SIZE / 2, top: CANVAS_SIZE / 2
-            });
-            const scale = Math.min(CANVAS_SIZE / fImg.width, CANVAS_SIZE / fImg.height) * 0.8;
-            fImg.set({ scaleX: scale, scaleY: scale });
-            canvas.add(fImg).center().setCoords();
-            canvas.setActiveObject(fImg).renderAll();
-        };
-        reader.readAsDataURL(file);
-    };
-
-    // 5. テキスト・削除・全消去
+    // 3. テキスト操作
     document.getElementById('addTextBtn').onclick = () => {
-        const t = new fabric.IText('Text Here', {
-            left: CANVAS_SIZE / 2, top: CANVAS_SIZE / 2,
-            originX: 'center', originY: 'center',
-            fontFamily: 'Inter', fill: '#ffffff', fontSize: 120, fontWeight: '900'
+        const t = new fabric.IText('AMAKUSA', {
+            left: SIZE / 2,
+            top: SIZE / 2,
+            originX: 'center',
+            originY: 'center',
+            fontFamily: 'Noto Sans JP',
+            fontWeight: '900',
+            fontSize: 200,
+            fill: '#fff'
         });
         canvas.add(t).setActiveObject(t).renderAll();
     };
 
-    document.getElementById('deleteObj').onclick = () => {
-        const o = canvas.getActiveObject();
-        if(o) { canvas.remove(o); canvas.discardActiveObject(); canvas.renderAll(); }
+    // 同期処理
+    canvas.on('selection:created', () => document.getElementById('deleteBtn').classList.remove('hidden'));
+    canvas.on('selection:cleared', () => document.getElementById('deleteBtn').classList.add('hidden'));
+    
+    document.getElementById('deleteBtn').onclick = () => {
+        canvas.remove(canvas.getActiveObject());
+        canvas.discardActiveObject().renderAll();
     };
-    canvas.on('selection:created', () => document.getElementById('deleteObj').classList.remove('hidden'));
-    canvas.on('selection:cleared', () => document.getElementById('deleteObj').classList.add('hidden'));
 
     document.getElementById('clearAllBtn').onclick = () => {
-        if(confirm("キャンバスを白紙に戻しますか？")){
+        if(confirm("すべて消去しますか？")) {
             canvas.clear();
-            canvas.setBackgroundColor('#0f172a', canvas.renderAll.bind(canvas));
+            canvas.setBackgroundColor('#000', canvas.renderAll.bind(canvas));
         }
     };
 
+    // 4. 保存
     document.getElementById('downloadBtn').onclick = () => {
-        showToast("保存用データを書き出し中...");
-        const url = canvas.toDataURL({ format: 'png', multiplier: 2 });
-        const a = document.createElement('a');
-        a.download = `Amakusa-Creative-${Date.now()}.png`;
-        a.href = url;
-        a.click();
+        const dataURL = canvas.toDataURL({ format: 'png', multiplier: 1 });
+        const link = document.createElement('a');
+        link.download = `Amakusa-AI-${Date.now()}.png`;
+        link.href = dataURL;
+        link.click();
     };
 
-    function showToast(msg) {
-        const t = document.getElementById('toast');
-        t.innerText = msg; t.classList.remove('hidden');
-        setTimeout(() => t.classList.add('hidden'), 3000);
-    }
-
-    // ツール切り替えロジック
+    // ツール切り替え
     document.querySelectorAll('.tool-btn').forEach(btn => {
         btn.onclick = () => {
-            const tool = btn.dataset.tool;
-            if (tool === 'upload') { document.getElementById('imageUpload').click(); return; }
-            if (!tool) return;
+            if (btn.id === 'clearAllBtn') return;
             document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             document.querySelectorAll('.panel-content').forEach(p => p.classList.add('hidden'));
-            document.getElementById(`panel-${tool}`).classList.remove('hidden');
+            document.getElementById(`panel-${btn.dataset.tool}`).classList.remove('hidden');
+            if (btn.dataset.tool === 'upload') document.getElementById('imageUpload').click();
         };
     });
 });
