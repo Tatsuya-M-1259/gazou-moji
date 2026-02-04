@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. キャンバス初期化 (1080x1080 固定)
+    // 1. キャンバス初期化 (1080x1080)
     const canvas = new fabric.Canvas('mainCanvas', {
         width: 1080,
         height: 1080,
@@ -18,16 +18,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 2. ツール切替
     document.querySelectorAll('.tool-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.onclick = () => {
             const tool = btn.dataset.tool;
             if (tool === 'upload') { document.getElementById('imageUpload').click(); return; }
             if (!tool) return;
             document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             document.querySelectorAll('.panel-content').forEach(p => p.classList.add('hidden'));
-            const target = document.getElementById(`panel-${tool}`);
-            if (target) target.classList.remove('hidden');
-        });
+            document.getElementById(`panel-${tool}`).classList.remove('hidden');
+        };
     });
 
     // 3. 画像生成ロジック (堅牢版)
@@ -48,44 +47,42 @@ document.addEventListener('DOMContentLoaded', () => {
         thumbContainer.innerHTML = '';
         selectHint.classList.add('hidden');
 
-        // 4枚同時生成
         for (let i = 0; i < 4; i++) {
             const seed = Math.floor(Math.random() * 999999) + i;
-            const encodedPrompt = encodeURIComponent(promptInput);
-            const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1080&height=1080&nologo=true&seed=${seed}`;
+            const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(promptInput)}?width=1080&height=1080&nologo=true&seed=${seed}`;
             
             const thumbWrap = document.createElement('div');
             thumbWrap.className = "thumb-item animate-pulse bg-slate-800";
             
             const img = new Image();
-            img.crossOrigin = "anonymous"; // 保存時のエラー防止
+            img.crossOrigin = "anonymous";
             img.src = imageUrl;
             
             img.onload = () => {
                 thumbWrap.classList.remove('animate-pulse');
                 thumbWrap.appendChild(img);
             };
-            img.onerror = () => {
-                thumbWrap.innerHTML = "<div class='flex items-center justify-center h-full text-[8px] text-red-500'>Error</div>";
-            };
+            img.onerror = () => { thumbWrap.innerHTML = "<div class='h-full flex items-center justify-center text-[8px]'>Error</div>"; };
             
             thumbWrap.onclick = () => {
                 showToast("キャンバスに展開中...");
-                // 修正: 確実にロードさせてから Fabric Image に変換
+                // 修正: Fabric.jsの画像追加を確実に実行
                 fabric.Image.fromURL(imageUrl, (fImg) => {
-                    // キャンバスの幅に合わせる
-                    fImg.scaleToWidth(canvas.width);
-                    if (fImg.getScaledHeight() > canvas.height) {
-                        fImg.scaleToHeight(canvas.height);
-                    }
+                    // 比率を保ちつつ、キャンバスの1080pxに最大フィットさせる
+                    const ratio = Math.min(canvas.width / fImg.width, canvas.height / fImg.height);
+                    fImg.set({
+                        scaleX: ratio,
+                        scaleY: ratio,
+                        originX: 'center',
+                        originY: 'center'
+                    });
                     canvas.add(fImg);
-                    fImg.center(); // キャンバスの中央に配置
-                    fImg.setCoords(); // 操作ハンドルの位置を更新
+                    fImg.center(); // 中央配置
+                    fImg.setCoords(); // 操作座標の更新
                     canvas.setActiveObject(fImg);
-                    canvas.renderAll(); // 再描画を強制
+                    canvas.renderAll();
                 }, { crossOrigin: 'anonymous' });
             };
-            
             thumbContainer.appendChild(thumbWrap);
         }
 
@@ -103,22 +100,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const reader = new FileReader();
         reader.onload = (f) => {
             fabric.Image.fromURL(f.target.result, (img) => {
-                img.scaleToWidth(canvas.width * 0.8);
-                canvas.add(img);
-                img.center();
-                img.setCoords();
-                canvas.setActiveObject(img);
-                canvas.renderAll();
+                const ratio = Math.min(canvas.width / img.width, canvas.height / img.height) * 0.8;
+                img.set({ scaleX: ratio, scaleY: ratio, originX: 'center', originY: 'center' });
+                canvas.add(img).center().setCoords();
+                canvas.setActiveObject(img).renderAll();
             });
         };
         reader.readAsDataURL(file);
     };
 
-    // 5. 基本操作
+    // 5. テキスト編集
     document.getElementById('addTextBtn').onclick = () => {
         const t = new fabric.IText('Text Here', { 
             left: 540, top: 540, originX: 'center', originY: 'center',
-            fontFamily: 'Inter', fill: '#ffffff', fontSize: 120, fontWeight: '900' 
+            fontFamily: 'Inter', fill: '#ffffff', fontSize: 100, fontWeight: '900' 
         });
         canvas.add(t).setActiveObject(t).renderAll();
     };
@@ -138,7 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // 6. 保存
+    // 6. 保存 (高解像度)
     document.getElementById('downloadBtn').onclick = () => {
         showToast("画像を生成中...");
         const url = canvas.toDataURL({ format: 'png', multiplier: 2 });
