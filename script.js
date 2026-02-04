@@ -32,7 +32,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     loadKey();
 
-    // 更新機能: 入力と同時に保存
     apiKeyInput.addEventListener('input', (e) => {
         const key = e.target.value.trim();
         if (key) {
@@ -41,16 +40,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // リセット機能: 保存されたキーを完全に消去
     document.getElementById('clearApiKey').addEventListener('click', () => {
         localStorage.removeItem(API_KEY_STORAGE_KEY);
         apiKeyInput.value = '';
         apiKeyStatus.classList.add('hidden');
         debugInfo.classList.add('hidden');
-        showToast("キーをリセットしました。再入力してください。");
+        showToast("キーをリセットしました");
     });
 
-    // ツール切替ロジック
+    // ツール切替
     document.querySelectorAll('.tool-btn').forEach(btn => {
         btn.onclick = () => {
             const tool = btn.dataset.tool;
@@ -62,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     });
 
-    // 2. 日本語プロンプトの翻訳機能
+    // 翻訳ロジック
     async function translatePrompt(text, key) {
         if (!/[ぁ-んァ-ン一-龠]/.test(text)) return text;
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
@@ -77,7 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) { return text; }
     }
 
-    // 3. Gemini Imagen 3 画像生成
+    // 3. Gemini Imagen 画像生成 (修正版モデルID)
     document.getElementById('generateBtn').addEventListener('click', async () => {
         const rawPrompt = document.getElementById('aiPrompt').value.trim();
         const apiKey = apiKeyInput.value.trim();
@@ -96,7 +94,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             const finalPrompt = await translatePrompt(rawPrompt, apiKey);
-            const MODEL = 'imagen-3.0-generate-001';
+            
+            // モデルIDを 002 に更新 (404対策)
+            const MODEL = 'imagen-3.0-generate-002';
             const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:predict?key=${apiKey}`;
 
             const response = await fetch(url, {
@@ -112,8 +112,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!response.ok) {
                 let errorMsg = `APIエラー (${response.status}): ${data.error?.message || '不明なエラー'}`;
-                if (response.status === 403) {
-                    errorMsg = "【権限エラー (403)】\nこのAPIキーにはImagen 3の利用権限がありません。AI StudioのSettingsでImagenが有効か確認してください。";
+                if (response.status === 404) {
+                    errorMsg = "【エラー 404】モデルが見つかりません。アカウントの権限設定を確認してください。";
                 }
                 throw new Error(errorMsg);
             }
@@ -129,7 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 debugInfo.innerText = "受信データ:\n" + JSON.stringify(data, null, 2);
                 debugInfo.classList.remove('hidden');
-                throw new Error("画像データが空で返されました。プロンプトがブロックされた可能性があります。");
+                throw new Error("画像データが空でした。プロンプトがブロックされた可能性があります。");
             }
         } catch (e) {
             debugInfo.innerText = e.message;
@@ -145,23 +145,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- その他基本機能 (以前と同様) ---
-    document.getElementById('imageUpload').onchange = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (f) => {
-            fabric.Image.fromURL(f.target.result, (img) => {
-                img.scaleToWidth(canvas.width * 0.8);
-                canvas.add(img).centerObject(img).setActiveObject(img);
-            });
-        };
-        reader.readAsDataURL(file);
-    };
-
+    // その他基本機能 (テキスト追加・削除等)
     document.getElementById('addTextBtn').onclick = () => {
         const t = new fabric.IText('Text Here', { left: 100, top: 100, fontFamily: 'Inter', fill: '#ffffff', fontSize: 100, fontWeight: '900' });
         canvas.add(t).setActiveObject(t);
+    };
+
+    document.getElementById('deleteObj').onclick = () => {
+        const o = canvas.getActiveObject();
+        if(o){canvas.remove(o); canvas.discardActiveObject(); canvas.renderAll();}
     };
 
     document.getElementById('downloadBtn').onclick = () => {
@@ -175,6 +167,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function showToast(msg) {
         const t = document.getElementById('toast');
         t.innerText = msg; t.classList.remove('hidden');
-        setTimeout(() => t.classList.add('hidden'), 4000);
+        setTimeout(() => t.classList.add('hidden'), 5000);
     }
 });
