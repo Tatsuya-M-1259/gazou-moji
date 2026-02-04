@@ -1,29 +1,42 @@
+/* プロンプト入力欄の改善 */
+#aiPrompt {
+    color: white !important;
+    background-color: rgba(30, 41, 59, 0.8);
+}
+
 .tool-btn {
-    @apply p-3 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all duration-200 relative;
+    @apply p-4 rounded-2xl text-slate-500 hover:text-emerald-400 hover:bg-emerald-400/5 transition-all duration-300 relative;
 }
 .tool-btn.active {
-    @apply bg-emerald-500/10 text-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.2)];
+    @apply bg-emerald-400/10 text-emerald-400 shadow-[0_0_20px_rgba(52,211,153,0.15)];
 }
 .panel-title {
-    @apply text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-6;
+    @apply text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-8 border-l-2 border-emerald-500 pl-3;
 }
 .input-field {
-    @apply w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all;
+    @apply w-full bg-slate-800/80 border border-slate-700 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-emerald-500/50 outline-none transition-all;
 }
 .btn-primary {
-    @apply w-full bg-emerald-600 hover:bg-emerald-500 py-3 rounded-xl font-bold transition-all shadow-lg shadow-emerald-900/20 active:scale-[0.98];
+    @apply w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 py-4 rounded-2xl font-black transition-all shadow-lg active:scale-95;
 }
 .btn-outline {
-    @apply w-full border border-slate-700 hover:border-emerald-500 py-2 rounded-xl transition-all;
+    @apply w-full border border-slate-700 text-slate-300 hover:border-emerald-500/50 hover:bg-emerald-500/5 py-3 rounded-2xl transition-all;
 }
 .filter-btn, .btn-filter {
-    @apply bg-slate-800 border border-slate-700 py-3 rounded-xl text-xs hover:border-emerald-500 transition-all active:bg-slate-700;
+    @apply bg-slate-800 border border-slate-700 py-4 rounded-xl text-[10px] font-black uppercase tracking-tighter hover:border-emerald-500 transition-all active:bg-slate-700;
 }
 .label {
-    @apply block text-[10px] text-slate-500 mb-1 font-bold;
+    @apply block text-[10px] text-slate-500 mb-2 font-black uppercase tracking-widest;
 }
 #canvas-container {
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    background: radial-gradient(#1e293b 1px, transparent 1px);
-    background-size: 20px 20px;
+    transition: transform 0.4s cubic-bezier(0.2, 1, 0.3, 1);
+    background-color: #000;
+    /* ドット背景に変更 */
+    background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
+    background-size: 30px 30px;
+}
+
+/* スライダーの見た目改善 */
+input[type=range] {
+    @apply h-1.5 rounded-lg cursor-pointer;
 }
