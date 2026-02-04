@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Amakusa Creative AI - Perfect Fixed</title>
+    <title>Amakusa Creative AI - Ultimate Fixed</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
@@ -19,7 +19,7 @@
         <div class="flex gap-3">
             <button id="downloadBtn" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-6 py-2 rounded-full text-sm font-black transition-all flex items-center gap-2 shadow-xl active:scale-95">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                高画質で保存
+                高画質保存
             </button>
         </div>
     </header>
@@ -34,8 +34,8 @@
         </aside>
 
         <section class="flex-1 bg-slate-950 relative flex items-center justify-center p-4 overflow-hidden">
-            <div id="canvas-wrapper" class="flex items-center justify-center w-full h-full">
-                <div id="canvas-container" class="shadow-2xl border border-slate-800 bg-black">
+            <div id="canvas-wrapper" class="relative w-full h-full flex items-center justify-center">
+                <div id="canvas-container" class="shadow-2xl border border-slate-800">
                     <canvas id="mainCanvas"></canvas>
                 </div>
             </div>
@@ -47,17 +47,16 @@
             <div id="panel-ai" class="panel-content">
                 <h2 class="panel-title">AI Image Multi-Select</h2>
                 <div class="mb-4">
-                    <label class="label text-emerald-400">画像生成プロンプト</label>
-                    <textarea id="aiPrompt" class="input-field h-32" placeholder="例: Cyberpunk Amakusa sunset..."></textarea>
+                    <label class="label text-emerald-400 font-bold">画像生成プロンプト</label>
+                    <textarea id="aiPrompt" class="input-field h-32" placeholder="例: Cyberpunk Amakusa landscape..."></textarea>
                 </div>
                 <button id="generateBtn" class="btn-primary flex justify-center items-center gap-2">
                     <span id="genText">無料で4枚生成する</span>
                     <div id="genLoader" class="hidden w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></div>
                 </button>
                 
-                <div id="thumbnailContainer" class="grid grid-cols-2 gap-3 mt-6">
-                    </div>
-                <p id="selectHint" class="text-[10px] text-emerald-500 mt-4 italic hidden text-center font-bold uppercase tracking-widest">TAP TO ADD TO CANVAS</p>
+                <div id="thumbnailContainer" class="grid grid-cols-2 gap-3 mt-6"></div>
+                <p id="selectHint" class="text-[10px] text-emerald-500 mt-4 italic hidden text-center font-black uppercase tracking-widest">TAP TO ADD TO CANVAS</p>
             </div>
 
             <div id="panel-text" class="panel-content hidden">
