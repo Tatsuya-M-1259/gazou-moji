@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
         preserveObjectStacking: true
     });
 
+    // プレビューのレスポンシブスケール
     function resizePreview() {
         const container = document.getElementById('canvas-container');
         const parent = container.parentElement;
@@ -21,23 +22,21 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', () => {
             const tool = btn.dataset.tool;
             if (tool === 'upload') { document.getElementById('imageUpload').click(); return; }
-            if (tool) {
-                document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                document.querySelectorAll('.panel-content').forEach(p => p.classList.add('hidden'));
-                const target = document.getElementById(`panel-${tool}`);
-                if (target) target.classList.remove('hidden');
-            }
+            if (!tool) return;
+            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            document.querySelectorAll('.panel-content').forEach(p => p.classList.add('hidden'));
+            document.getElementById(`panel-${tool}`).classList.remove('hidden');
         });
     });
 
-    // 3. 無料画像生成 (4枚候補作成)
-    const thumbnailContainer = document.getElementById('thumbnailContainer');
+    // 3. 無料画像生成 (4枚同時作成)
+    const thumbContainer = document.getElementById('thumbnailContainer');
     const selectHint = document.getElementById('selectHint');
 
     document.getElementById('generateBtn').addEventListener('click', async () => {
-        const prompt = document.getElementById('aiPrompt').value.trim();
-        if (!prompt) return showToast("プロンプトを入力してください");
+        const promptInput = document.getElementById('aiPrompt').value.trim();
+        if (!promptInput) return showToast("プロンプトを入力してください");
 
         const btn = document.getElementById('generateBtn');
         const loader = document.getElementById('genLoader');
@@ -46,44 +45,51 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.disabled = true;
         loader.classList.remove('hidden');
         textLabel.innerText = "生成中...";
-        thumbnailContainer.innerHTML = '';
-        thumbnailContainer.classList.add('hidden');
+        thumbContainer.innerHTML = '';
         selectHint.classList.add('hidden');
 
-        // 4枚の異なるシードでサムネイルを生成
+        // 4枚の画像を生成
         for (let i = 0; i < 4; i++) {
-            const seed = Math.floor(Math.random() * 1000000) + i;
-            const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1080&height=1080&nologo=true&seed=${seed}`;
+            const seed = Math.floor(Math.random() * 999999) + i;
+            // 日本語を安全なURL形式に変換
+            const encodedPrompt = encodeURIComponent(promptInput);
+            const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1080&height=1080&nologo=true&seed=${seed}`;
             
-            const thumb = document.createElement('img');
-            thumb.src = imageUrl;
-            thumb.className = "w-full aspect-square object-cover rounded-lg border-2 border-transparent hover:border-emerald-500 cursor-pointer transition-all";
+            const thumbWrap = document.createElement('div');
+            thumbWrap.className = "thumb-item animate-pulse"; // 読み込み中のアニメーション
             
-            thumb.onclick = () => {
-                // キャンバスに選んだ画像を追加
-                fabric.Image.fromURL(imageUrl, (img) => {
-                    img.set({ originX: 'center', originY: 'center' });
-                    img.scaleToWidth(canvas.width);
-                    canvas.add(img);
-                    img.center();
-                    img.setCoords();
-                    canvas.setActiveObject(img);
+            const img = new Image();
+            img.src = imageUrl;
+            img.onload = () => {
+                thumbWrap.classList.remove('animate-pulse');
+                thumbWrap.appendChild(img);
+            };
+            img.onerror = () => { thumbWrap.innerHTML = "<p class='text-[8px] p-2 text-red-400'>エラー</p>"; };
+            
+            thumbWrap.onclick = () => {
+                showToast("キャンバスに展開中...");
+                fabric.Image.fromURL(imageUrl, (fImg) => {
+                    // キャンバスにフィットさせるロジック
+                    fImg.scaleToWidth(canvas.width);
+                    if (fImg.getScaledHeight() > canvas.height) {
+                        fImg.scaleToHeight(canvas.height);
+                    }
+                    canvas.add(fImg);
+                    fImg.center();
+                    fImg.setCoords();
+                    canvas.setActiveObject(fImg);
                     canvas.renderAll();
-                    showToast("キャンバスに追加しました");
                 }, { crossOrigin: 'anonymous' });
             };
-            thumbnailContainer.appendChild(thumb);
+            
+            thumbContainer.appendChild(thumbWrap);
         }
 
-        // 表示
-        setTimeout(() => {
-            thumbnailContainer.classList.remove('hidden');
-            selectHint.classList.remove('hidden');
-            btn.disabled = false;
-            loader.classList.add('hidden');
-            textLabel.innerText = "無料で4枚生成する";
-            showToast("4枚の候補を作成しました");
-        }, 1000);
+        btn.disabled = false;
+        loader.classList.add('hidden');
+        textLabel.innerText = "無料で4枚生成する";
+        selectHint.classList.remove('hidden');
+        showToast("候補を作成しました");
     });
 
     // 4. 画像アップロード
@@ -93,19 +99,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const reader = new FileReader();
         reader.onload = (f) => {
             fabric.Image.fromURL(f.target.result, (img) => {
-                img.set({ originX: 'center', originY: 'center' });
                 img.scaleToWidth(canvas.width * 0.8);
                 canvas.add(img).center().setCoords();
                 canvas.setActiveObject(img).renderAll();
-                showToast("画像を読み込みました");
             });
         };
         reader.readAsDataURL(file);
     };
 
-    // 5. テキスト編集 & 削除
+    // 5. テキスト編集
     document.getElementById('addTextBtn').onclick = () => {
-        const t = new fabric.IText('Text Here', { left: 540, top: 540, originX: 'center', originY: 'center', fontFamily: 'Inter', fill: '#ffffff', fontSize: 100, fontWeight: '900' });
+        const t = new fabric.IText('Text Here', { 
+            left: 540, top: 540, originX: 'center', originY: 'center',
+            fontFamily: 'Inter', fill: '#ffffff', fontSize: 120, fontWeight: '900' 
+        });
         canvas.add(t).setActiveObject(t).renderAll();
     };
 
@@ -117,17 +124,16 @@ document.addEventListener('DOMContentLoaded', () => {
     canvas.on('selection:created', () => document.getElementById('deleteObj').classList.remove('hidden'));
     canvas.on('selection:cleared', () => document.getElementById('deleteObj').classList.add('hidden'));
 
-    // 全消去
     document.getElementById('clearAllBtn').onclick = () => {
-        if(confirm("キャンバスをリセットしますか？")){ canvas.clear(); canvas.setBackgroundColor('#0f172a', canvas.renderAll.bind(canvas)); }
+        if(confirm("キャンバスを白紙に戻しますか？")){ canvas.clear(); canvas.setBackgroundColor('#0f172a', canvas.renderAll.bind(canvas)); }
     };
 
-    // 6. 保存 (高画質 2x)
+    // 6. 保存
     document.getElementById('downloadBtn').onclick = () => {
-        showToast("高画質データを生成中...");
+        showToast("画像を書き出し中...");
         const url = canvas.toDataURL({ format: 'png', multiplier: 2 });
         const a = document.createElement('a');
-        a.download = `Amakusa-AI-${Date.now()}.png`;
+        a.download = `Creative-AI-${Date.now()}.png`;
         a.href = url;
         a.click();
     };
