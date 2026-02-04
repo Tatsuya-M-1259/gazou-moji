@@ -1,18 +1,16 @@
 document.addEventListener('DOMContentLoaded', () => {
     // 1. キャンバスの初期設定
     const canvas = new fabric.Canvas('mainCanvas', {
-        width: 1080, // SNS解像度
+        width: 1080,
         height: 1080,
         backgroundColor: '#0f172a',
         preserveObjectStacking: true
     });
 
-    // キャンバスのリサイズ表示制御
     function resizePreview() {
         const container = document.getElementById('canvas-container');
         const parent = container.parentElement;
-        const padding = 60;
-        const scale = Math.min((parent.clientWidth - padding) / 1080, (parent.clientHeight - padding) / 1080);
+        const scale = Math.min((parent.clientWidth - 60) / 1080, (parent.clientHeight - 60) / 1080);
         container.style.transform = `scale(${scale})`;
     }
     window.addEventListener('resize', resizePreview);
@@ -23,7 +21,6 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', () => {
             const tool = btn.dataset.tool;
             if (tool === 'upload') { document.getElementById('imageUpload').click(); return; }
-            
             document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             document.querySelectorAll('.panel-content').forEach(p => p.classList.add('hidden'));
@@ -31,9 +28,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // 3. AI画像生成 (Pollinations AI: APIキー不要)
+    // 3. Gemini (Imagen 3) 画像生成
     document.getElementById('generateBtn').addEventListener('click', async () => {
         const prompt = document.getElementById('aiPrompt').value.trim();
+        const apiKey = document.getElementById('geminiApiKey').value.trim();
+
+        if (!apiKey) return showToast("APIキーを入力してください");
         if (!prompt) return showToast("プロンプトを入力してください");
 
         const btn = document.getElementById('generateBtn');
@@ -42,29 +42,52 @@ document.addEventListener('DOMContentLoaded', () => {
 
         btn.disabled = true;
         loader.classList.remove('hidden');
-        text.innerText = "生成しています...";
+        text.innerText = "Geminiが生成中...";
 
         try {
-            const seed = Math.floor(Math.random() * 1000000);
-            const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1080&height=1080&nologo=true&seed=${seed}`;
-            
-            fabric.Image.fromURL(imageUrl, (img) => {
-                img.scaleToWidth(canvas.width);
-                canvas.add(img);
-                canvas.centerObject(img);
-                canvas.setActiveObject(img);
-                resetGenBtn();
-                showToast("画像を生成しました");
-            }, { crossOrigin: 'anonymous' });
+            // Gemini API (Imagen 3) のエンドポイント
+            const MODEL = 'imagen-3.0-generate-001';
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:predict?key=${apiKey}`;
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    instances: [{ prompt: prompt }],
+                    parameters: {
+                        sampleCount: 1,
+                        aspectRatio: "1:1"
+                    }
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.predictions && data.predictions[0].bytesBase64Encoded) {
+                const base64Data = data.predictions[0].bytesBase64Encoded;
+                const imgSrc = `data:image/png;base64,${base64Data}`;
+                
+                fabric.Image.fromURL(imgSrc, (img) => {
+                    img.scaleToWidth(canvas.width);
+                    canvas.add(img).centerObject(img).setActiveObject(img);
+                    showToast("画像を生成しました");
+                    resetUI();
+                }, { crossOrigin: 'anonymous' });
+            } else {
+                console.error("API Response:", data);
+                showToast("生成に失敗しました（内容に制限がある可能性があります）");
+                resetUI();
+            }
         } catch (e) {
-            showToast("エラーが発生しました");
-            resetGenBtn();
+            console.error(e);
+            showToast("接続エラーが発生しました");
+            resetUI();
         }
 
-        function resetGenBtn() {
+        function resetUI() {
             btn.disabled = false;
             loader.classList.add('hidden');
-            text.innerText = "AI画像を生成する";
+            text.innerText = "Imagen 3 で生成する";
         }
     });
 
@@ -76,25 +99,22 @@ document.addEventListener('DOMContentLoaded', () => {
         reader.onload = (f) => {
             fabric.Image.fromURL(f.target.result, (img) => {
                 img.scaleToWidth(canvas.width * 0.7);
-                canvas.centerObject(img);
-                canvas.add(img);
-                canvas.setActiveObject(img);
+                canvas.centerObject(img).add(img).setActiveObject(img);
                 showToast("画像を読み込みました");
             });
         };
         reader.readAsDataURL(file);
     });
 
-    // 5. テキスト編集と同期
+    // 5. テキスト編集 (以前と同様)
     document.getElementById('addTextBtn').addEventListener('click', () => {
-        const text = new fabric.IText('ここに入力', {
+        const text = new fabric.IText('Text Here', {
             left: 200, top: 200, fontFamily: 'Inter',
             fill: '#ffffff', fontSize: 120, fontWeight: 'bold'
         });
         canvas.add(text).setActiveObject(text);
     });
 
-    // 選択時に削除ボタンを表示し、値をパネルに同期
     canvas.on('selection:created', onSelect);
     canvas.on('selection:updated', onSelect);
     canvas.on('selection:cleared', () => document.getElementById('deleteObj').classList.add('hidden'));
@@ -122,12 +142,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (obj) { obj.set('fontFamily', e.target.value); canvas.renderAll(); }
     };
 
-    // 6. レイヤーと削除
+    // レイヤーと削除
     document.getElementById('bringForward').onclick = () => { const o = canvas.getActiveObject(); if(o){canvas.bringForward(o); canvas.renderAll();} };
     document.getElementById('sendBackward').onclick = () => { const o = canvas.getActiveObject(); if(o){canvas.sendBackwards(o); canvas.renderAll();} };
     document.getElementById('deleteObj').onclick = () => { const o = canvas.getActiveObject(); if(o){canvas.remove(o); canvas.discardActiveObject(); canvas.renderAll();} };
 
-    // 7. スタンプ (SNS風絵文字)
+    // 6. スタンプ
     const stamps = ['✨', '🔥', '👑', '💖', '📍', '📸', '🌈', '💯', '⚡', '💬', '🚀', '🎁'];
     const stampList = document.getElementById('stampList');
     stamps.forEach(s => {
@@ -141,7 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
         stampList.appendChild(b);
     });
 
-    // 8. フィルタ
+    // 7. フィルタとトリミング
     document.querySelectorAll('.filter-btn').forEach(btn => {
         btn.onclick = () => {
             const img = canvas.getActiveObject();
@@ -156,7 +176,6 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     });
 
-    // 9. トリミング
     document.getElementById('cropBtn').onclick = () => {
         const img = canvas.getActiveObject();
         if (!img || img.type !== 'image') return showToast("画像を選択してください");
@@ -168,7 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast("中央をトリミングしました");
     };
 
-    // 10. 書き出し
+    // 8. 書き出し
     document.getElementById('downloadBtn').onclick = () => {
         showToast("保存用データを生成中...");
         const url = canvas.toDataURL({ format: 'png', multiplier: 2 });
