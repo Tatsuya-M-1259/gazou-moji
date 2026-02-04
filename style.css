@@ -1,7 +1,7 @@
 #aiPrompt {
     color: #ffffff !important;
     background-color: #1e293b !important;
-    border: 1px solid #334155 !important;
+    border: 1px solid #475569 !important;
     font-size: 14px !important;
     line-height: 1.6 !important;
     padding: 1rem !important;
@@ -26,7 +26,7 @@
     @apply text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-8 border-l-2 border-emerald-500 pl-3;
 }
 .input-field {
-    @apply w-full bg-slate-800/80 border border-slate-700 rounded-2xl p-4 text-sm outline-none transition-all;
+    @apply w-full bg-slate-800 border border-slate-700 rounded-2xl p-4 text-sm outline-none transition-all;
 }
 .btn-primary {
     @apply w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 py-4 rounded-2xl font-black transition-all shadow-lg active:scale-95;
