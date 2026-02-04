@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 1. キャンバス初期化
     const canvas = new fabric.Canvas('mainCanvas', {
-        width: 1024, // Imagen 3 標準サイズ
+        width: 1024,
         height: 1024,
         backgroundColor: '#0f172a',
         preserveObjectStacking: true
@@ -12,45 +12,57 @@ document.addEventListener('DOMContentLoaded', () => {
     function resizePreview() {
         const container = document.getElementById('canvas-container');
         const parent = container.parentElement;
-        const scale = Math.min((parent.clientWidth - 60) / 1024, (parent.clientHeight - 60) / 1024);
+        const scale = Math.min((parent.clientWidth - 40) / 1024, (parent.clientHeight - 40) / 1024);
         container.style.transform = `scale(${scale})`;
     }
     window.addEventListener('resize', resizePreview);
     resizePreview();
 
-    // APIキーの自動保存管理
+    // APIキー管理
     const apiKeyInput = document.getElementById('geminiApiKey');
     const apiKeyStatus = document.getElementById('apiKeyStatus');
-    const savedKey = localStorage.getItem(API_KEY_STORAGE_KEY);
-    if (savedKey) {
-        apiKeyInput.value = savedKey;
-        apiKeyStatus.classList.remove('hidden');
-    }
+    const debugInfo = document.getElementById('debugInfo');
 
+    const loadKey = () => {
+        const savedKey = localStorage.getItem(API_KEY_STORAGE_KEY);
+        if (savedKey) {
+            apiKeyInput.value = savedKey;
+            apiKeyStatus.classList.remove('hidden');
+        }
+    };
+    loadKey();
+
+    // 更新機能: 入力と同時に保存
     apiKeyInput.addEventListener('input', (e) => {
         const key = e.target.value.trim();
         if (key) {
             localStorage.setItem(API_KEY_STORAGE_KEY, key);
             apiKeyStatus.classList.remove('hidden');
-        } else {
-            localStorage.removeItem(API_KEY_STORAGE_KEY);
-            apiKeyStatus.classList.add('hidden');
         }
     });
 
-    // 2. ツール切替
+    // リセット機能: 保存されたキーを完全に消去
+    document.getElementById('clearApiKey').addEventListener('click', () => {
+        localStorage.removeItem(API_KEY_STORAGE_KEY);
+        apiKeyInput.value = '';
+        apiKeyStatus.classList.add('hidden');
+        debugInfo.classList.add('hidden');
+        showToast("キーをリセットしました。再入力してください。");
+    });
+
+    // ツール切替ロジック
     document.querySelectorAll('.tool-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.onclick = () => {
             const tool = btn.dataset.tool;
             if (tool === 'upload') { document.getElementById('imageUpload').click(); return; }
             document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             document.querySelectorAll('.panel-content').forEach(p => p.classList.add('hidden'));
             document.getElementById(`panel-${tool}`).classList.remove('hidden');
-        });
+        };
     });
 
-    // 翻訳ロジック
+    // 2. 日本語プロンプトの翻訳機能
     async function translatePrompt(text, key) {
         if (!/[ぁ-んァ-ン一-龠]/.test(text)) return text;
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
@@ -58,9 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const res = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: `Translate to simple English image prompt: ${text}` }] }]
-                })
+                body: JSON.stringify({ contents: [{ parts: [{ text: `Translate image prompt to English: ${text}` }] }] })
             });
             const data = await res.json();
             return data.candidates[0].content.parts[0].text.trim();
@@ -71,7 +81,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('generateBtn').addEventListener('click', async () => {
         const rawPrompt = document.getElementById('aiPrompt').value.trim();
         const apiKey = apiKeyInput.value.trim();
-        const debugInfo = document.getElementById('debugInfo');
         debugInfo.classList.add('hidden');
 
         if (!apiKey) return showToast("APIキーを入力してください");
@@ -87,8 +96,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             const finalPrompt = await translatePrompt(rawPrompt, apiKey);
-            
-            // Imagen 3 Predict Endpoint
             const MODEL = 'imagen-3.0-generate-001';
             const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:predict?key=${apiKey}`;
 
@@ -104,7 +111,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(`API Error ${response.status}: ${data.error?.message || 'Unknown error'}`);
+                let errorMsg = `APIエラー (${response.status}): ${data.error?.message || '不明なエラー'}`;
+                if (response.status === 403) {
+                    errorMsg = "【権限エラー (403)】\nこのAPIキーにはImagen 3の利用権限がありません。AI StudioのSettingsでImagenが有効か確認してください。";
+                }
+                throw new Error(errorMsg);
             }
 
             if (data.predictions && data.predictions[0]?.bytesBase64Encoded) {
@@ -116,13 +127,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     resetUI();
                 }, { crossOrigin: 'anonymous' });
             } else {
-                debugInfo.innerText = "Response Body: " + JSON.stringify(data, null, 2);
+                debugInfo.innerText = "受信データ:\n" + JSON.stringify(data, null, 2);
                 debugInfo.classList.remove('hidden');
-                throw new Error("画像データが返されませんでした。詳細はデバッグ情報を確認してください。");
+                throw new Error("画像データが空で返されました。プロンプトがブロックされた可能性があります。");
             }
         } catch (e) {
-            console.error(e);
-            showToast(e.message);
+            debugInfo.innerText = e.message;
+            debugInfo.classList.remove('hidden');
+            showToast("生成できませんでした");
             resetUI();
         }
 
@@ -152,43 +164,10 @@ document.addEventListener('DOMContentLoaded', () => {
         canvas.add(t).setActiveObject(t);
     };
 
-    // 同期・レイヤー・削除・フィルタ・スタンプのロジックは以前の完成版を維持
-    canvas.on('selection:created', (e) => syncUI(e.selected[0]));
-    canvas.on('selection:updated', (e) => syncUI(e.selected[0]));
-    canvas.on('selection:cleared', () => document.getElementById('deleteObj').classList.add('hidden'));
-
-    function syncUI(obj) {
-        document.getElementById('deleteObj').classList.remove('hidden');
-        if (obj.type === 'i-text' || obj.type === 'text') {
-            document.getElementById('fontSize').value = obj.fontSize;
-            document.getElementById('textColor').value = obj.fill;
-            document.getElementById('fontFamily').value = obj.fontFamily;
-        }
-    }
-
-    document.getElementById('fontSize').oninput = (e) => { const o = canvas.getActiveObject(); if(o){o.set('fontSize', parseInt(e.target.value)); canvas.renderAll();} };
-    document.getElementById('textColor').oninput = (e) => { const o = canvas.getActiveObject(); if(o){o.set('fill', e.target.value); canvas.renderAll();} };
-    document.getElementById('deleteObj').onclick = () => { const o = canvas.getActiveObject(); if(o){canvas.remove(o); canvas.discardActiveObject(); canvas.renderAll();} };
-
-    // スタンプ生成
-    const stamps = ['✨', '🔥', '👑', '💖', '📍', '🌈', '⚡', '💬', '🚀', '💯', '🎨', '📸'];
-    const stampList = document.getElementById('stampList');
-    stamps.forEach(s => {
-        const b = document.createElement('button');
-        b.className = "text-2xl p-3 bg-slate-800 rounded-xl hover:bg-slate-700 transition-all active:scale-90 shadow-inner";
-        b.innerText = s;
-        b.onclick = () => {
-            const st = new fabric.Text(s, { fontSize: 180 });
-            canvas.add(st).centerObject(st).setActiveObject(st);
-        };
-        stampList.appendChild(b);
-    });
-
     document.getElementById('downloadBtn').onclick = () => {
-        showToast("高画質データを書き出し中...");
         const url = canvas.toDataURL({ format: 'png', multiplier: 2 });
         const a = document.createElement('a');
-        a.download = `Amakusa-Creative-${Date.now()}.png`;
+        a.download = `Amakusa-AI-${Date.now()}.png`;
         a.href = url;
         a.click();
     };
@@ -196,6 +175,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function showToast(msg) {
         const t = document.getElementById('toast');
         t.innerText = msg; t.classList.remove('hidden');
-        setTimeout(() => t.classList.add('hidden'), 5000); // エラーを読みやすくするため長めに表示
+        setTimeout(() => t.classList.add('hidden'), 4000);
     }
 });
