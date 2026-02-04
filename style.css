@@ -1,7 +1,20 @@
-/* プロンプト入力欄の改善 */
+/* プロンプト入力欄の修正 - 背景色と文字色を強制 */
 #aiPrompt {
-    color: white !important;
-    background-color: rgba(30, 41, 59, 0.8);
+    color: #ffffff !important;
+    background-color: #1e293b !important;
+    border: 1px solid #334155 !important;
+    font-size: 14px !important;
+    line-height: 1.6 !important;
+    z-index: 50 !important;
+}
+
+#aiPrompt::placeholder {
+    color: #64748b !important;
+}
+
+#aiPrompt:focus {
+    border-color: #10b981 !important;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2) !important;
 }
 
 .tool-btn {
@@ -14,7 +27,7 @@
     @apply text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-8 border-l-2 border-emerald-500 pl-3;
 }
 .input-field {
-    @apply w-full bg-slate-800/80 border border-slate-700 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-emerald-500/50 outline-none transition-all;
+    @apply w-full bg-slate-800 border border-slate-700 rounded-2xl p-4 text-sm outline-none transition-all;
 }
 .btn-primary {
     @apply w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 py-4 rounded-2xl font-black transition-all shadow-lg active:scale-95;
@@ -31,12 +44,6 @@
 #canvas-container {
     transition: transform 0.4s cubic-bezier(0.2, 1, 0.3, 1);
     background-color: #000;
-    /* ドット背景に変更 */
     background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
     background-size: 30px 30px;
-}
-
-/* スライダーの見た目改善 */
-input[type=range] {
-    @apply h-1.5 rounded-lg cursor-pointer;
 }
