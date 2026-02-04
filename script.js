@@ -1,10 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const API_KEY_STORAGE_KEY = 'amakusa_creative_gemini_api_key';
-
-    // 1. キャンバス初期化
+    // 1. キャンバス初期化 (1080x1080)
     const canvas = new fabric.Canvas('mainCanvas', {
-        width: 1024,
-        height: 1024,
+        width: 1080,
+        height: 1080,
         backgroundColor: '#0f172a',
         preserveObjectStacking: true
     });
@@ -12,77 +10,29 @@ document.addEventListener('DOMContentLoaded', () => {
     function resizePreview() {
         const container = document.getElementById('canvas-container');
         const parent = container.parentElement;
-        const scale = Math.min((parent.clientWidth - 40) / 1024, (parent.clientHeight - 40) / 1024);
+        const padding = 64;
+        const scale = Math.min((parent.clientWidth - padding) / 1080, (parent.clientHeight - padding) / 1080);
         container.style.transform = `scale(${scale})`;
     }
     window.addEventListener('resize', resizePreview);
     resizePreview();
 
-    // APIキー管理
-    const apiKeyInput = document.getElementById('geminiApiKey');
-    const apiKeyStatus = document.getElementById('apiKeyStatus');
-    const debugInfo = document.getElementById('debugInfo');
-
-    const loadKey = () => {
-        const savedKey = localStorage.getItem(API_KEY_STORAGE_KEY);
-        if (savedKey) {
-            apiKeyInput.value = savedKey;
-            apiKeyStatus.classList.remove('hidden');
-        }
-    };
-    loadKey();
-
-    apiKeyInput.addEventListener('input', (e) => {
-        const key = e.target.value.trim();
-        if (key) {
-            localStorage.setItem(API_KEY_STORAGE_KEY, key);
-            apiKeyStatus.classList.remove('hidden');
-        }
-    });
-
-    document.getElementById('clearApiKey').addEventListener('click', () => {
-        localStorage.removeItem(API_KEY_STORAGE_KEY);
-        apiKeyInput.value = '';
-        apiKeyStatus.classList.add('hidden');
-        debugInfo.classList.add('hidden');
-        showToast("キーをリセットしました。");
-    });
-
-    // ツール切替
+    // 2. ツール切替
     document.querySelectorAll('.tool-btn').forEach(btn => {
-        btn.onclick = () => {
+        btn.addEventListener('click', () => {
             const tool = btn.dataset.tool;
             if (tool === 'upload') { document.getElementById('imageUpload').click(); return; }
             document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             document.querySelectorAll('.panel-content').forEach(p => p.classList.add('hidden'));
             document.getElementById(`panel-${tool}`).classList.remove('hidden');
-        };
+        });
     });
 
-    // 日本語プロンプトをGeminiで翻訳
-    async function translatePrompt(text, key) {
-        if (!/[ぁ-んァ-ン一-龠]/.test(text)) return text;
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
-        try {
-            const res = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: [{ parts: [{ text: `Translate this image prompt to English: ${text}` }] }] })
-            });
-            const data = await res.json();
-            return data.candidates[0].content.parts[0].text.trim();
-        } catch (e) { return text; }
-    }
-
-    // 3. Imagen 4 による画像生成
+    // 3. 無料画像生成 (Pollinations AI)
     document.getElementById('generateBtn').addEventListener('click', async () => {
-        const rawPrompt = document.getElementById('aiPrompt').value.trim();
-        const apiKey = apiKeyInput.value.trim();
-        debugInfo.classList.add('hidden');
-
-        if (!apiKey) return showToast("APIキーを入力してください");
-        if (!rawPrompt) return showToast("プロンプトを入力してください");
+        const prompt = document.getElementById('aiPrompt').value.trim();
+        if (!prompt) return showToast("プロンプトを入力してください");
 
         const btn = document.getElementById('generateBtn');
         const loader = document.getElementById('genLoader');
@@ -90,63 +40,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
         btn.disabled = true;
         loader.classList.remove('hidden');
-        textLabel.innerText = "生成中...";
+        textLabel.innerText = "生成しています...";
 
         try {
-            const finalPrompt = await translatePrompt(rawPrompt, apiKey);
+            // ランダムなシード値を生成して毎回異なる画像を作る
+            const seed = Math.floor(Math.random() * 1000000);
+            const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1080&height=1080&nologo=true&seed=${seed}`;
             
-            // 重要: モデルIDを最新の 'imagen-4.0-generate-001' に更新
-            const MODEL = 'imagen-4.0-generate-001';
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:predict?key=${apiKey}`;
-
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    instances: [{ prompt: finalPrompt }],
-                    parameters: { sampleCount: 1, aspectRatio: "1:1" }
-                })
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                let errorMsg = `APIエラー (${response.status}): ${data.error?.message || '不明なエラー'}`;
-                if (response.status === 404) {
-                    errorMsg = "【エラー 404】モデルが見つかりません。APIキーに画像生成権限があるか確認してください。";
-                }
-                throw new Error(errorMsg);
-            }
-
-            if (data.predictions && data.predictions[0]?.bytesBase64Encoded) {
-                const b64 = data.predictions[0].bytesBase64Encoded;
-                fabric.Image.fromURL(`data:image/png;base64,${b64}`, (img) => {
-                    img.scaleToWidth(canvas.width);
-                    canvas.add(img).centerObject(img).setActiveObject(img);
-                    showToast("画像を生成しました");
-                    resetUI();
-                }, { crossOrigin: 'anonymous' });
-            } else {
-                debugInfo.innerText = "詳細ログ:\n" + JSON.stringify(data, null, 2);
-                debugInfo.classList.remove('hidden');
-                throw new Error("画像が返されませんでした。");
-            }
+            fabric.Image.fromURL(imageUrl, (img) => {
+                img.scaleToWidth(canvas.width);
+                canvas.add(img).centerObject(img).setActiveObject(img);
+                showToast("画像を生成しました");
+                resetGenUI();
+            }, { crossOrigin: 'anonymous' });
         } catch (e) {
-            debugInfo.innerText = e.message;
-            debugInfo.classList.remove('hidden');
-            showToast("生成できませんでした");
-            resetUI();
+            showToast("生成に失敗しました");
+            resetGenUI();
         }
 
-        function resetUI() {
+        function resetGenUI() {
             btn.disabled = false;
             loader.classList.add('hidden');
-            textLabel.innerText = "Imagen 4 で生成する";
+            textLabel.innerText = "無料で画像を生成する";
         }
     });
 
-    // 基本操作 (画像アップロード、テキスト追加、削除、保存)
-    document.getElementById('imageUpload').onchange = (e) => {
+    // 4. 画像アップロード
+    document.getElementById('imageUpload').addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (!file) return;
         const reader = new FileReader();
@@ -154,35 +74,92 @@ document.addEventListener('DOMContentLoaded', () => {
             fabric.Image.fromURL(f.target.result, (img) => {
                 img.scaleToWidth(canvas.width * 0.8);
                 canvas.add(img).centerObject(img).setActiveObject(img);
+                showToast("画像を読み込みました");
             });
         };
         reader.readAsDataURL(file);
-    };
+    });
 
-    document.getElementById('addTextBtn').onclick = () => {
-        const t = new fabric.IText('Text Here', { left: 100, top: 100, fontFamily: 'Inter', fill: '#ffffff', fontSize: 100, fontWeight: '900' });
-        canvas.add(t).setActiveObject(t);
-    };
+    // 5. テキスト編集 & 同期
+    document.getElementById('addTextBtn').addEventListener('click', () => {
+        const text = new fabric.IText('Text Here', {
+            left: 200, top: 200, fontFamily: 'Inter',
+            fill: '#ffffff', fontSize: 120, fontWeight: '900',
+            cornerColor: '#10B981', transparentCorners: false
+        });
+        canvas.add(text).setActiveObject(text);
+    });
 
-    document.getElementById('deleteObj').onclick = () => {
+    canvas.on('selection:created', (e) => syncUI(e.selected[0]));
+    canvas.on('selection:updated', (e) => syncUI(e.selected[0]));
+    canvas.on('selection:cleared', () => document.getElementById('deleteObj').classList.add('hidden'));
+
+    function syncUI(obj) {
+        document.getElementById('deleteObj').classList.remove('hidden');
+        if (obj.type === 'i-text' || obj.type === 'text') {
+            document.getElementById('fontSize').value = obj.fontSize;
+            document.getElementById('textColor').value = obj.fill;
+            document.getElementById('fontFamily').value = obj.fontFamily;
+        }
+    }
+
+    document.getElementById('fontSize').oninput = (e) => {
         const o = canvas.getActiveObject();
-        if(o){canvas.remove(o); canvas.discardActiveObject(); canvas.renderAll();}
+        if (o) { o.set('fontSize', parseInt(e.target.value)); canvas.renderAll(); }
+    };
+    document.getElementById('textColor').oninput = (e) => {
+        const o = canvas.getActiveObject();
+        if (o) { o.set('fill', e.target.value); canvas.renderAll(); }
     };
 
-    canvas.on('selection:created', (e) => { document.getElementById('deleteObj').classList.remove('hidden'); });
-    canvas.on('selection:cleared', () => { document.getElementById('deleteObj').classList.add('hidden'); });
+    // レイヤー・削除操作
+    document.getElementById('bringForward').onclick = () => { const o = canvas.getActiveObject(); if(o){ canvas.bringForward(o); canvas.renderAll(); } };
+    document.getElementById('sendBackward').onclick = () => { const o = canvas.getActiveObject(); if(o){ canvas.sendBackwards(o); canvas.renderAll(); } };
+    document.getElementById('deleteObj').onclick = () => { const o = canvas.getActiveObject(); if(o){ canvas.remove(o); canvas.discardActiveObject(); canvas.renderAll(); } };
 
+    // 6. スタンプ
+    const stamps = ['✨', '🔥', '👑', '💖', '📍', '🌈', '⚡', '💬', '🚀', '💯', '🎨', '📸'];
+    const stampList = document.getElementById('stampList');
+    stamps.forEach(s => {
+        const btn = document.createElement('button');
+        btn.className = "text-2xl p-3 bg-slate-800 rounded-xl hover:bg-slate-700 transition-all active:scale-90 shadow-inner";
+        btn.innerText = s;
+        btn.onclick = () => {
+            const stamp = new fabric.Text(s, { fontSize: 180 });
+            canvas.add(stamp).centerObject(stamp).setActiveObject(stamp);
+        };
+        stampList.appendChild(btn);
+    });
+
+    // 7. フィルタ機能
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.onclick = () => {
+            const img = canvas.getActiveObject();
+            if (!img || img.type !== 'image') return showToast("画像を選択してください");
+            img.filters = [];
+            if (btn.dataset.filter !== 'none') {
+                const f = new fabric.Image.filters[btn.dataset.filter]();
+                img.filters.push(f);
+            }
+            img.applyFilters();
+            canvas.renderAll();
+        };
+    });
+
+    // 8. 高画質書き出し (2倍解像度)
     document.getElementById('downloadBtn').onclick = () => {
+        showToast("保存用データを生成中...");
         const url = canvas.toDataURL({ format: 'png', multiplier: 2 });
-        const a = document.createElement('a');
-        a.download = `Amakusa-AI-${Date.now()}.png`;
-        a.href = url;
-        a.click();
+        const link = document.createElement('a');
+        link.download = `Amakusa-Creative-AI-${Date.now()}.png`;
+        link.href = url;
+        link.click();
     };
 
     function showToast(msg) {
         const t = document.getElementById('toast');
-        t.innerText = msg; t.classList.remove('hidden');
-        setTimeout(() => t.classList.add('hidden'), 5000);
+        t.innerText = msg;
+        t.classList.remove('hidden');
+        setTimeout(() => t.classList.add('hidden'), 3000);
     }
 });
