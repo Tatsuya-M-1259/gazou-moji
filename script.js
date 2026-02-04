@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. キャンバスの初期設定
+    // 1. キャンバスの初期化 (Instagram基準 1080x1080)
     const canvas = new fabric.Canvas('mainCanvas', {
         width: 1080,
         height: 1080,
@@ -7,20 +7,28 @@ document.addEventListener('DOMContentLoaded', () => {
         preserveObjectStacking: true
     });
 
-    function resizePreview() {
+    // プレビューの自動スケール調整
+    function updatePreviewScale() {
         const container = document.getElementById('canvas-container');
         const parent = container.parentElement;
-        const scale = Math.min((parent.clientWidth - 60) / 1080, (parent.clientHeight - 60) / 1080);
+        const padding = 64;
+        const scale = Math.min(
+            (parent.clientWidth - padding) / 1080,
+            (parent.clientHeight - padding) / 1080
+        );
         container.style.transform = `scale(${scale})`;
     }
-    window.addEventListener('resize', resizePreview);
-    resizePreview();
+    window.addEventListener('resize', updatePreviewScale);
+    updatePreviewScale();
 
-    // 2. ツール切替
+    // 2. サイドバーのツール切替
     document.querySelectorAll('.tool-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const tool = btn.dataset.tool;
-            if (tool === 'upload') { document.getElementById('imageUpload').click(); return; }
+            if (tool === 'upload') {
+                document.getElementById('imageUpload').click();
+                return;
+            }
             document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             document.querySelectorAll('.panel-content').forEach(p => p.classList.add('hidden'));
@@ -28,7 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // 3. Gemini (Imagen 3) 画像生成
+    // 3. Gemini Imagen 3 画像生成
     document.getElementById('generateBtn').addEventListener('click', async () => {
         const prompt = document.getElementById('aiPrompt').value.trim();
         const apiKey = document.getElementById('geminiApiKey').value.trim();
@@ -38,16 +46,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const btn = document.getElementById('generateBtn');
         const loader = document.getElementById('genLoader');
-        const text = document.getElementById('genText');
+        const textLabel = document.getElementById('genText');
 
         btn.disabled = true;
         loader.classList.remove('hidden');
-        text.innerText = "Geminiが生成中...";
+        textLabel.innerText = "Geminiが生成中...";
 
         try {
-            // Gemini API (Imagen 3) のエンドポイント
-            const MODEL = 'imagen-3.0-generate-001';
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:predict?key=${apiKey}`;
+            // Imagen 3 API Call (v1beta エンドポイント想定)
+            const MODEL_NAME = 'imagen-3.0-generate-001';
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:predict?key=${apiKey}`;
 
             const response = await fetch(url, {
                 method: 'POST',
@@ -65,29 +73,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (data.predictions && data.predictions[0].bytesBase64Encoded) {
                 const base64Data = data.predictions[0].bytesBase64Encoded;
-                const imgSrc = `data:image/png;base64,${base64Data}`;
-                
-                fabric.Image.fromURL(imgSrc, (img) => {
+                fabric.Image.fromURL(`data:image/png;base64,${base64Data}`, (img) => {
                     img.scaleToWidth(canvas.width);
                     canvas.add(img).centerObject(img).setActiveObject(img);
                     showToast("画像を生成しました");
-                    resetUI();
+                    resetGenUI();
                 }, { crossOrigin: 'anonymous' });
             } else {
-                console.error("API Response:", data);
-                showToast("生成に失敗しました（内容に制限がある可能性があります）");
-                resetUI();
+                console.error("Gemini Error:", data);
+                showToast("生成エラー。制限等を確認してください。");
+                resetGenUI();
             }
-        } catch (e) {
-            console.error(e);
+        } catch (error) {
+            console.error(error);
             showToast("接続エラーが発生しました");
-            resetUI();
+            resetGenUI();
         }
 
-        function resetUI() {
+        function resetGenUI() {
             btn.disabled = false;
             loader.classList.add('hidden');
-            text.innerText = "Imagen 3 で生成する";
+            textLabel.innerText = "Imagen 3 で生成する";
         }
     });
 
@@ -98,29 +104,30 @@ document.addEventListener('DOMContentLoaded', () => {
         const reader = new FileReader();
         reader.onload = (f) => {
             fabric.Image.fromURL(f.target.result, (img) => {
-                img.scaleToWidth(canvas.width * 0.7);
-                canvas.centerObject(img).add(img).setActiveObject(img);
+                img.scaleToWidth(canvas.width * 0.8);
+                canvas.add(img).centerObject(img).setActiveObject(img);
                 showToast("画像を読み込みました");
             });
         };
         reader.readAsDataURL(file);
     });
 
-    // 5. テキスト編集 (以前と同様)
+    // 5. テキスト編集 & 同期
     document.getElementById('addTextBtn').addEventListener('click', () => {
         const text = new fabric.IText('Text Here', {
             left: 200, top: 200, fontFamily: 'Inter',
-            fill: '#ffffff', fontSize: 120, fontWeight: 'bold'
+            fill: '#ffffff', fontSize: 120, fontWeight: '900',
+            cornerColor: '#10B981', transparentCorners: false
         });
         canvas.add(text).setActiveObject(text);
     });
 
-    canvas.on('selection:created', onSelect);
-    canvas.on('selection:updated', onSelect);
+    // 選択時にパネルの値を反映
+    canvas.on('selection:created', (e) => syncUI(e.selected[0]));
+    canvas.on('selection:updated', (e) => syncUI(e.selected[0]));
     canvas.on('selection:cleared', () => document.getElementById('deleteObj').classList.add('hidden'));
 
-    function onSelect(e) {
-        const obj = e.selected[0];
+    function syncUI(obj) {
         document.getElementById('deleteObj').classList.remove('hidden');
         if (obj.type === 'i-text' || obj.type === 'text') {
             document.getElementById('fontSize').value = obj.fontSize;
@@ -129,39 +136,40 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // パネルからオブジェクトへ反映
     document.getElementById('fontSize').oninput = (e) => {
-        const obj = canvas.getActiveObject();
-        if (obj) { obj.set('fontSize', parseInt(e.target.value)); canvas.renderAll(); }
+        const o = canvas.getActiveObject();
+        if (o) { o.set('fontSize', parseInt(e.target.value)); canvas.renderAll(); }
     };
     document.getElementById('textColor').oninput = (e) => {
-        const obj = canvas.getActiveObject();
-        if (obj) { obj.set('fill', e.target.value); canvas.renderAll(); }
+        const o = canvas.getActiveObject();
+        if (o) { o.set('fill', e.target.value); canvas.renderAll(); }
     };
     document.getElementById('fontFamily').onchange = (e) => {
-        const obj = canvas.getActiveObject();
-        if (obj) { obj.set('fontFamily', e.target.value); canvas.renderAll(); }
+        const o = canvas.getActiveObject();
+        if (o) { o.set('fontFamily', e.target.value); canvas.renderAll(); }
     };
 
-    // レイヤーと削除
-    document.getElementById('bringForward').onclick = () => { const o = canvas.getActiveObject(); if(o){canvas.bringForward(o); canvas.renderAll();} };
-    document.getElementById('sendBackward').onclick = () => { const o = canvas.getActiveObject(); if(o){canvas.sendBackwards(o); canvas.renderAll();} };
-    document.getElementById('deleteObj').onclick = () => { const o = canvas.getActiveObject(); if(o){canvas.remove(o); canvas.discardActiveObject(); canvas.renderAll();} };
+    // 6. レイヤー・削除操作
+    document.getElementById('bringForward').onclick = () => { const o = canvas.getActiveObject(); if(o){ canvas.bringForward(o); canvas.renderAll(); } };
+    document.getElementById('sendBackward').onclick = () => { const o = canvas.getActiveObject(); if(o){ canvas.sendBackwards(o); canvas.renderAll(); } };
+    document.getElementById('deleteObj').onclick = () => { const o = canvas.getActiveObject(); if(o){ canvas.remove(o); canvas.discardActiveObject(); canvas.renderAll(); } };
 
-    // 6. スタンプ
-    const stamps = ['✨', '🔥', '👑', '💖', '📍', '📸', '🌈', '💯', '⚡', '💬', '🚀', '🎁'];
+    // 7. スタンプ (絵文字)
+    const stamps = ['✨', '🔥', '👑', '💖', '📍', '🌈', '⚡', '💬', '🚀', '💯', '🎨', '📸'];
     const stampList = document.getElementById('stampList');
     stamps.forEach(s => {
-        const b = document.createElement('button');
-        b.className = "text-2xl p-3 bg-slate-800 rounded-xl hover:bg-slate-700 transition-all active:scale-90";
-        b.innerText = s;
-        b.onclick = () => {
-            const stamp = new fabric.Text(s, { fontSize: 150 });
+        const btn = document.createElement('button');
+        btn.className = "text-2xl p-3 bg-slate-800 rounded-xl hover:bg-slate-700 transition-all active:scale-90 shadow-inner";
+        btn.innerText = s;
+        btn.onclick = () => {
+            const stamp = new fabric.Text(s, { fontSize: 180 });
             canvas.add(stamp).centerObject(stamp).setActiveObject(stamp);
         };
-        stampList.appendChild(b);
+        stampList.appendChild(btn);
     });
 
-    // 7. フィルタとトリミング
+    // 8. フィルタ機能
     document.querySelectorAll('.filter-btn').forEach(btn => {
         btn.onclick = () => {
             const img = canvas.getActiveObject();
@@ -176,6 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     });
 
+    // 9. クロッピング (簡易実装: 70%中央切り抜き)
     document.getElementById('cropBtn').onclick = () => {
         const img = canvas.getActiveObject();
         if (!img || img.type !== 'image') return showToast("画像を選択してください");
@@ -187,19 +196,25 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast("中央をトリミングしました");
     };
 
-    // 8. 書き出し
+    // 10. キャンバス背景色
+    document.getElementById('canvasBgColor').oninput = (e) => {
+        canvas.setBackgroundColor(e.target.value, canvas.renderAll.bind(canvas));
+    };
+
+    // 11. 書き出し (高解像度 2x)
     document.getElementById('downloadBtn').onclick = () => {
         showToast("保存用データを生成中...");
         const url = canvas.toDataURL({ format: 'png', multiplier: 2 });
-        const a = document.createElement('a');
-        a.download = `Creative-AI-${Date.now()}.png`;
-        a.href = url;
-        a.click();
+        const link = document.createElement('a');
+        link.download = `Creative-AI-Pro-${Date.now()}.png`;
+        link.href = url;
+        link.click();
     };
 
     function showToast(msg) {
         const t = document.getElementById('toast');
-        t.innerText = msg; t.classList.remove('hidden');
+        t.innerText = msg;
+        t.classList.remove('hidden');
         setTimeout(() => t.classList.add('hidden'), 3000);
     }
 });
