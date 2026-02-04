@@ -1,7 +1,7 @@
-/* キャンバスの物理サイズを維持 */
-#mainCanvas {
-    max-width: none !important;
-    max-height: none !important;
+/* キャンバス自体の物理サイズ崩れを防止 */
+.canvas-container {
+    width: 1080px !important;
+    height: 1080px !important;
 }
 
 #aiPrompt {
@@ -28,27 +28,27 @@
     @apply w-full bg-slate-800/80 border border-slate-700 rounded-2xl p-4 text-sm outline-none transition-all focus:border-emerald-500;
 }
 .btn-primary {
-    @apply w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 py-4 rounded-2xl font-black transition-all active:scale-95 shadow-lg;
+    @apply w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 py-4 rounded-2xl font-black transition-all active:scale-95 shadow-lg shadow-emerald-500/10;
 }
 .btn-outline {
-    @apply w-full border border-slate-700 text-slate-300 hover:border-emerald-500 py-3 rounded-2xl transition-all;
+    @apply w-full border border-slate-700 text-slate-300 hover:border-emerald-500 py-3 rounded-2xl transition-all font-bold;
 }
 
-/* サムネイル枠を正方形に完全固定 */
+/* サムネイルの枠を正方形に強制 */
 .thumb-item {
     @apply w-full relative bg-slate-800 rounded-xl overflow-hidden border-2 border-transparent hover:border-emerald-500 transition-all cursor-pointer;
     aspect-ratio: 1 / 1;
 }
 .thumb-item img {
-    @apply w-full h-full object-cover pointer-events-none;
+    @apply w-full h-full object-cover;
 }
 
 #canvas-container {
-    transition: transform 0.4s cubic-bezier(0.2, 1, 0.3, 1);
+    transition: transform 0.3s cubic-bezier(0.2, 1, 0.3, 1);
     background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
     background-size: 30px 30px;
+    background-color: #000;
     transform-origin: center center;
-    /* 1080pxの正方形を維持するためのベース */
     width: 1080px;
     height: 1080px;
 }
