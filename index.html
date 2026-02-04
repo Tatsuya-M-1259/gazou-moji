@@ -14,12 +14,12 @@
     <header class="h-16 border-b border-slate-800 flex items-center justify-between px-6 bg-slate-900/80 backdrop-blur-xl z-20 relative">
         <div class="flex items-center gap-2">
             <div class="w-9 h-9 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-xl flex items-center justify-center font-black text-slate-950 shadow-lg shadow-emerald-500/20">A</div>
-            <h1 class="text-lg font-bold tracking-tight">Amakusa <span class="text-emerald-400">Creative AI</span></h1>
+            <h1 class="text-lg font-bold tracking-tight text-white">Amakusa <span class="text-emerald-400">Creative AI</span></h1>
         </div>
         <div class="flex gap-3">
             <button id="downloadBtn" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-6 py-2 rounded-full text-sm font-black transition-all flex items-center gap-2 shadow-xl shadow-emerald-500/10 active:scale-95">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                高画質で保存
+                保存する
             </button>
         </div>
     </header>
@@ -27,7 +27,7 @@
     <main class="flex h-[calc(100vh-64px)]">
         <aside class="w-20 border-r border-slate-800 flex flex-col items-center py-8 gap-8 bg-slate-900/50">
             <button class="tool-btn active" data-tool="ai" title="AI画像生成"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></button>
-            <button class="tool-btn" data-tool="upload" title="画像を読み込む"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0l-4-4m4 4V4"/></svg><input type="file" id="imageUpload" class="hidden" accept="image/*"></button>
+            <button class="tool-btn" data-tool="upload" title="画像を読み込む"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0l-4 4m4-4v12"/></svg><input type="file" id="imageUpload" class="hidden" accept="image/*"></button>
             <button class="tool-btn" data-tool="text" title="文字を入れる"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h7"/></svg></button>
             <button class="tool-btn" data-tool="stamp" title="スタンプ"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
             <button class="tool-btn" data-tool="filter" title="エフェクト"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg></button>
@@ -47,18 +47,18 @@
                 <h2 class="panel-title">Gemini AI Image</h2>
                 <div class="mb-6">
                     <label class="label">Gemini API Key</label>
-                    <input type="password" id="geminiApiKey" class="input-field py-2 font-mono text-xs" placeholder="Google AI Studioのキーを入力">
-                    <p id="apiKeyStatus" class="text-[9px] text-emerald-500 mt-1 italic hidden">✓ ブラウザに保存されました</p>
+                    <input type="password" id="geminiApiKey" class="input-field py-2 font-mono text-xs" placeholder="AI Studioのキーを入力">
+                    <p id="apiKeyStatus" class="text-[9px] text-emerald-500 mt-1 italic hidden">✓ ブラウザに保存済み</p>
                 </div>
                 <div class="relative group">
-                    <label class="label">Prompt (日本語OK)</label>
-                    <textarea id="aiPrompt" class="input-field h-44 text-white placeholder-slate-600 focus:border-emerald-500" placeholder="例: 天草の夕日と未来的なイルカ..."></textarea>
+                    <label class="label text-white">画像生成プロンプト</label>
+                    <textarea id="aiPrompt" class="input-field h-44 text-white placeholder-slate-600 focus:border-emerald-500" placeholder="例: 天草の夕日、波打ち際で遊ぶ未来的なイルカ、幻想的な光..."></textarea>
                 </div>
                 <button id="generateBtn" class="btn-primary mt-4 flex justify-center items-center gap-2">
                     <span id="genText">Imagen 3 で生成する</span>
                     <div id="genLoader" class="hidden w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></div>
                 </button>
-                <p class="text-[10px] text-slate-500 mt-4 leading-relaxed italic">日本語はAIが自動で英語に翻訳して生成します。</p>
+                <div id="debugInfo" class="mt-4 p-3 bg-red-900/10 border border-red-900/30 rounded-xl text-[10px] text-red-400 hidden overflow-x-auto font-mono"></div>
             </div>
 
             <div id="panel-text" class="panel-content hidden">
