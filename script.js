@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. キャンバス初期化 (1080x1080 物理サイズ)
+    // 1. キャンバスの物理サイズを 1080x1080 に固定
     const canvas = new fabric.Canvas('mainCanvas', {
         width: 1080,
         height: 1080,
@@ -7,10 +7,11 @@ document.addEventListener('DOMContentLoaded', () => {
         preserveObjectStacking: true
     });
 
-    // 表示用のスケーリング調整
+    // プレビュー表示のスケーリング調整
     function resizePreview() {
         const container = document.getElementById('canvas-container');
         const wrapper = document.getElementById('canvas-wrapper');
+        if (!container || !wrapper) return;
         const scale = Math.min(
             (wrapper.clientWidth - 40) / 1080, 
             (wrapper.clientHeight - 40) / 1080
@@ -34,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     });
 
-    // 3. 4枚画像生成ロジック
+    // 3. 4枚画像生成
     const thumbContainer = document.getElementById('thumbnailContainer');
     const selectHint = document.getElementById('selectHint');
 
@@ -48,7 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         btn.disabled = true;
         loader.classList.remove('hidden');
-        textLabel.innerText = "生成中...";
+        textLabel.innerText = "AIが思考中...";
         thumbContainer.innerHTML = '';
         selectHint.classList.add('hidden');
 
@@ -57,11 +58,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(promptInput)}?width=1080&height=1080&nologo=true&seed=${seed}`;
             
             const thumbItem = document.createElement('div');
-            thumbItem.className = "thumb-item animate-pulse";
+            thumbItem.className = "thumb-item animate-pulse bg-slate-800";
             
             const img = new Image();
-            img.src = url;
             img.crossOrigin = "anonymous";
+            img.src = url;
             
             img.onload = () => {
                 thumbItem.classList.remove('animate-pulse');
@@ -69,22 +70,32 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             
             thumbItem.onclick = () => {
-                showToast("キャンバスに追加中...");
-                // 修正: 確実にFabric Imageとして中央に最大サイズで配置
+                showToast("キャンバスに展開中...");
+                // 決定版: Fabric.jsへの確実な追加ロジック
                 fabric.Image.fromURL(url, (fImg) => {
-                    // 比率を保ってキャンバスにフィットさせる
-                    const ratio = Math.min(canvas.width / fImg.width, canvas.height / fImg.height);
+                    // ここで画像本来のサイズに基づいて計算
+                    const canvasW = canvas.width;
+                    const canvasH = canvas.height;
+                    const imgW = fImg.width;
+                    const imgH = fImg.height;
+
+                    // アスペクト比を維持して最大化フィット
+                    const scale = Math.min(canvasW / imgW, canvasH / imgH);
+                    
                     fImg.set({
-                        scaleX: ratio,
-                        scaleY: ratio,
+                        scaleX: scale,
+                        scaleY: scale,
                         originX: 'center',
-                        originY: 'center'
+                        originY: 'center',
+                        left: canvasW / 2,
+                        top: canvasH / 2
                     });
+                    
                     canvas.add(fImg);
-                    fImg.center();
                     fImg.setCoords();
                     canvas.setActiveObject(fImg);
                     canvas.renderAll();
+                    showToast("追加しました");
                 }, { crossOrigin: 'anonymous' });
             };
             thumbContainer.appendChild(thumbItem);
@@ -96,23 +107,28 @@ document.addEventListener('DOMContentLoaded', () => {
         selectHint.classList.remove('hidden');
     });
 
-    // 4. 画像アップロード
+    // 4. 画像アップロード (ここも同じロジックで修正)
     document.getElementById('imageUpload').onchange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
         const reader = new FileReader();
         reader.onload = (f) => {
             fabric.Image.fromURL(f.target.result, (img) => {
-                const ratio = Math.min(canvas.width / img.width, canvas.height / img.height) * 0.8;
-                img.set({ scaleX: ratio, scaleY: ratio, originX: 'center', originY: 'center' });
-                canvas.add(img).center().setCoords();
-                canvas.setActiveObject(img).renderAll();
+                const scale = Math.min(canvas.width / img.width, canvas.height / img.height) * 0.8;
+                img.set({ 
+                    scaleX: scale, scaleY: scale, 
+                    originX: 'center', originY: 'center',
+                    left: canvas.width / 2, top: canvas.height / 2
+                });
+                canvas.add(img).setActiveObject(img);
+                img.setCoords();
+                canvas.renderAll();
             });
         };
         reader.readAsDataURL(file);
     };
 
-    // 5. その他基本操作
+    // 5. テキスト追加
     document.getElementById('addTextBtn').onclick = () => {
         const t = new fabric.IText('Text Here', { 
             left: 540, top: 540, originX: 'center', originY: 'center',
@@ -121,11 +137,11 @@ document.addEventListener('DOMContentLoaded', () => {
         canvas.add(t).setActiveObject(t).renderAll();
     };
 
+    // 削除・全消去
     document.getElementById('deleteObj').onclick = () => {
         const o = canvas.getActiveObject();
         if(o){ canvas.remove(o); canvas.discardActiveObject(); canvas.renderAll(); }
     };
-
     canvas.on('selection:created', () => document.getElementById('deleteObj').classList.remove('hidden'));
     canvas.on('selection:cleared', () => document.getElementById('deleteObj').classList.add('hidden'));
 
@@ -136,11 +152,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // 6. 保存 (高画質)
     document.getElementById('downloadBtn').onclick = () => {
         showToast("保存用データを生成中...");
         const url = canvas.toDataURL({ format: 'png', multiplier: 2 });
         const a = document.createElement('a');
-        a.download = `Amakusa-Creative-${Date.now()}.png`;
+        a.download = `Amakusa-AI-${Date.now()}.png`;
         a.href = url;
         a.click();
     };
