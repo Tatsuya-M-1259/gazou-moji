@@ -16,7 +16,7 @@
 .btn-outline {
     @apply w-full border border-slate-700 hover:border-emerald-500 py-2 rounded-xl transition-all;
 }
-.filter-btn {
+.filter-btn, .btn-filter {
     @apply bg-slate-800 border border-slate-700 py-3 rounded-xl text-xs hover:border-emerald-500 transition-all active:bg-slate-700;
 }
 .label {
