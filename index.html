@@ -9,94 +9,100 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-slate-900 text-white font-['Inter','Noto_Sans_JP'] overflow-hidden">
+<body class="bg-slate-950 text-slate-100 font-['Inter','Noto_Sans_JP'] overflow-hidden">
 
-    <header class="h-16 border-b border-slate-800 flex items-center justify-between px-6 bg-slate-900/50 backdrop-blur-md z-10 relative">
+    <header class="h-16 border-b border-slate-800 flex items-center justify-between px-6 bg-slate-900/80 backdrop-blur-xl z-20 relative">
         <div class="flex items-center gap-2">
-            <div class="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center font-bold text-slate-900">A</div>
-            <h1 class="text-xl font-bold tracking-tight">Amakusa <span class="text-emerald-500">Creative AI</span></h1>
+            <div class="w-9 h-9 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-xl flex items-center justify-center font-black text-slate-950 shadow-lg shadow-emerald-500/20">A</div>
+            <h1 class="text-lg font-bold tracking-tight">Amakusa <span class="text-emerald-400">Creative AI</span></h1>
         </div>
         <div class="flex gap-3">
-            <button id="downloadBtn" class="bg-emerald-600 hover:bg-emerald-500 px-5 py-2 rounded-full text-sm font-bold transition-all flex items-center gap-2 shadow-lg shadow-emerald-900/20">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                高画質で書き出し
+            <button id="downloadBtn" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-6 py-2 rounded-full text-sm font-black transition-all flex items-center gap-2 shadow-xl shadow-emerald-500/10 active:scale-95">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                保存する
             </button>
         </div>
     </header>
 
-    <main class="flex h-[calc(100vh-64px)] overflow-hidden">
-        <aside class="w-20 border-r border-slate-800 flex flex-col items-center py-6 gap-6 bg-slate-900">
-            <button class="tool-btn active" data-tool="ai" title="AI生成"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></button>
-            <button class="tool-btn" data-tool="upload" title="アップロード"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0l-4 4m4-4v12"/></svg><input type="file" id="imageUpload" class="hidden" accept="image/*"></button>
-            <button class="tool-btn" data-tool="text" title="テキスト"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h7"/></svg></button>
+    <main class="flex h-[calc(100vh-64px)]">
+        <aside class="w-20 border-r border-slate-800 flex flex-col items-center py-8 gap-8 bg-slate-900/50">
+            <button class="tool-btn active" data-tool="ai" title="AI画像生成"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></button>
+            <button class="tool-btn" data-tool="upload" title="画像を読み込む"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0l-4 4m4-4v12"/></svg><input type="file" id="imageUpload" class="hidden" accept="image/*"></button>
+            <button class="tool-btn" data-tool="text" title="文字を入れる"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h7"/></svg></button>
             <button class="tool-btn" data-tool="stamp" title="スタンプ"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
             <button class="tool-btn" data-tool="filter" title="エフェクト"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg></button>
-            <button class="tool-btn" data-tool="canvas" title="キャンバス設定"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 5a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5z"/></svg></button>
         </aside>
 
-        <section class="flex-1 bg-slate-950 relative overflow-hidden flex items-center justify-center p-4">
-            <div id="canvas-container" class="shadow-2xl border border-slate-800">
+        <section class="flex-1 bg-slate-950 relative flex items-center justify-center p-4">
+            <div id="canvas-container" class="shadow-[0_0_100px_rgba(0,0,0,0.5)] border border-slate-800">
                 <canvas id="mainCanvas"></canvas>
             </div>
         </section>
 
-        <aside class="w-80 border-l border-slate-800 bg-slate-900 p-6 overflow-y-auto">
+        <aside class="w-80 border-l border-slate-800 bg-slate-900/50 p-6 overflow-y-auto">
+            <button id="deleteObj" class="w-full bg-red-500/10 text-red-400 py-3 rounded-xl text-[11px] font-black mb-8 border border-red-500/20 hover:bg-red-500/20 transition-all uppercase tracking-widest hidden">選択中アイテムを削除</button>
+
             <div id="panel-ai" class="panel-content">
                 <h2 class="panel-title">AI Image Generation</h2>
-                <textarea id="aiPrompt" class="input-field h-32" placeholder="生成したい画像のイメージを入力..."></textarea>
-                <button id="generateBtn" class="btn-primary mt-4">AI画像を生成</button>
+                <div class="relative group">
+                    <textarea id="aiPrompt" class="input-field h-40 text-white placeholder-slate-500" placeholder="例: 海辺を走る白い馬, サイバーパンクな東京の街並み..."></textarea>
+                </div>
+                <button id="generateBtn" class="btn-primary mt-4 flex justify-center items-center gap-2">
+                    <span id="genText">AI画像を生成する</span>
+                    <div id="genLoader" class="hidden w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></div>
+                </button>
+                <p class="text-[10px] text-slate-500 mt-4 leading-relaxed italic">※英語で入力すると、より精度の高い画像が生成されます。</p>
             </div>
 
             <div id="panel-text" class="panel-content hidden">
-                <h2 class="panel-title">Text Edit</h2>
-                <button id="addTextBtn" class="btn-outline mb-6 text-sm">テキストを追加</button>
-                <div class="space-y-4">
-                    <label class="label">フォント</label>
-                    <select id="fontFamily" class="input-field py-2">
-                        <option value="Inter">Modern (Inter)</option>
-                        <option value="Noto Sans JP">Standard (Noto)</option>
-                        <option value="serif">Serif</option>
-                    </select>
-                    <label class="label">サイズ</label>
-                    <input type="range" id="fontSize" min="10" max="300" value="80" class="w-full accent-emerald-500">
-                    <label class="label">文字色</label>
-                    <input type="color" id="textColor" value="#ffffff" class="w-full h-10 bg-transparent rounded cursor-pointer">
-                    <div class="flex gap-2 mt-4">
-                        <button id="bringForward" class="btn-filter flex-1 text-[10px]">前面へ</button>
-                        <button id="sendBackward" class="btn-filter flex-1 text-[10px]">背面へ</button>
+                <h2 class="panel-title">Typography</h2>
+                <button id="addTextBtn" class="btn-outline mb-8 text-xs py-3 font-bold">+ 新しいテキスト</button>
+                <div class="space-y-6">
+                    <div>
+                        <label class="label">フォントスタイル</label>
+                        <select id="fontFamily" class="input-field py-3">
+                            <option value="Inter">Modern (Inter)</option>
+                            <option value="Noto Sans JP">Standard (Noto)</option>
+                            <option value="serif">Elegant (Serif)</option>
+                        </select>
                     </div>
-                    <button id="deleteObj" class="w-full bg-red-900/20 text-red-500 py-2 rounded-xl text-[10px] font-bold mt-4 hover:bg-red-900/40 transition-all">選択中アイテムを削除</button>
+                    <div>
+                        <label class="label">サイズ</label>
+                        <input type="range" id="fontSize" min="10" max="500" value="120" class="w-full accent-emerald-500">
+                    </div>
+                    <div>
+                        <label class="label">カラー</label>
+                        <input type="color" id="textColor" value="#ffffff" class="w-full h-12 bg-slate-800 border border-slate-700 p-1 rounded-xl cursor-pointer">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 pt-4">
+                        <button id="bringForward" class="btn-filter text-[10px] font-bold">前面へ</button>
+                        <button id="sendBackward" class="btn-filter text-[10px] font-bold">背面へ</button>
+                    </div>
                 </div>
             </div>
 
             <div id="panel-stamp" class="panel-content hidden">
-                <h2 class="panel-title">Stamps</h2>
+                <h2 class="panel-title">Icon Stamps</h2>
                 <div class="grid grid-cols-4 gap-3" id="stampList"></div>
             </div>
 
             <div id="panel-filter" class="panel-content hidden">
-                <h2 class="panel-title">Effects</h2>
+                <h2 class="panel-title">Filters</h2>
                 <div class="grid grid-cols-2 gap-2">
                     <button class="filter-btn" data-filter="Grayscale">モノクロ</button>
                     <button class="filter-btn" data-filter="Sepia">セピア</button>
                     <button class="filter-btn" data-filter="Invert">反転</button>
                     <button class="filter-btn" data-filter="none">リセット</button>
                 </div>
-                <div class="mt-8 border-t border-slate-800 pt-6">
-                    <h2 class="panel-title">Resize & Crop</h2>
-                    <button id="cropBtn" class="btn-outline text-xs py-3">選択画像を中央で切り抜き</button>
+                <div class="mt-10 border-t border-slate-800 pt-8">
+                    <h2 class="panel-title">Advanced</h2>
+                    <button id="cropBtn" class="btn-outline text-[10px] py-4 tracking-widest font-black uppercase">画像を中央で切り抜き</button>
                 </div>
-            </div>
-
-            <div id="panel-canvas" class="panel-content hidden">
-                <h2 class="panel-title">Canvas Settings</h2>
-                <label class="label">キャンバス背景色</label>
-                <input type="color" id="canvasBgColor" value="#0f172a" class="w-full h-10 bg-transparent rounded cursor-pointer">
             </div>
         </aside>
     </main>
 
-    <div id="toast" class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-6 py-3 rounded-full hidden z-50 shadow-2xl border border-slate-700"></div>
+    <div id="toast" class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-emerald-500 text-slate-950 px-8 py-3 rounded-full hidden z-50 shadow-2xl font-bold text-sm tracking-tight"></div>
 
     <script src="script.js"></script>
 </body>
