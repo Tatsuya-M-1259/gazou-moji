@@ -45,10 +45,22 @@ document.addEventListener('DOMContentLoaded', () => {
         apiKeyInput.value = '';
         apiKeyStatus.classList.add('hidden');
         debugInfo.classList.add('hidden');
-        showToast("キーを削除しました。再入力してください。");
+        showToast("キーをリセットしました。");
     });
 
-    // 2. 自動翻訳ロジック
+    // ツール切替
+    document.querySelectorAll('.tool-btn').forEach(btn => {
+        btn.onclick = () => {
+            const tool = btn.dataset.tool;
+            if (tool === 'upload') { document.getElementById('imageUpload').click(); return; }
+            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            document.querySelectorAll('.panel-content').forEach(p => p.classList.add('hidden'));
+            document.getElementById(`panel-${tool}`).classList.remove('hidden');
+        };
+    });
+
+    // 日本語プロンプトをGeminiで翻訳
     async function translatePrompt(text, key) {
         if (!/[ぁ-んァ-ン一-龠]/.test(text)) return text;
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
@@ -56,14 +68,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const res = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: [{ parts: [{ text: `Translate image prompt to English: ${text}` }] }] })
+                body: JSON.stringify({ contents: [{ parts: [{ text: `Translate this image prompt to English: ${text}` }] }] })
             });
             const data = await res.json();
             return data.candidates[0].content.parts[0].text.trim();
         } catch (e) { return text; }
     }
 
-    // 3. Gemini Imagen 3 画像生成 (修正版モデルID)
+    // 3. Imagen 4 による画像生成
     document.getElementById('generateBtn').addEventListener('click', async () => {
         const rawPrompt = document.getElementById('aiPrompt').value.trim();
         const apiKey = apiKeyInput.value.trim();
@@ -83,8 +95,8 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const finalPrompt = await translatePrompt(rawPrompt, apiKey);
             
-            // 重要: モデル名を 002 に更新。404が出る場合は 001 と 002 を切り替えて試せます。
-            const MODEL = 'imagen-3.0-generate-002';
+            // 重要: モデルIDを最新の 'imagen-4.0-generate-001' に更新
+            const MODEL = 'imagen-4.0-generate-001';
             const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:predict?key=${apiKey}`;
 
             const response = await fetch(url, {
@@ -101,7 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!response.ok) {
                 let errorMsg = `APIエラー (${response.status}): ${data.error?.message || '不明なエラー'}`;
                 if (response.status === 404) {
-                    errorMsg = "【404エラー】モデルが見つかりません。APIキーに画像生成の権限が付与されているか確認してください。";
+                    errorMsg = "【エラー 404】モデルが見つかりません。APIキーに画像生成権限があるか確認してください。";
                 }
                 throw new Error(errorMsg);
             }
@@ -115,9 +127,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     resetUI();
                 }, { crossOrigin: 'anonymous' });
             } else {
-                debugInfo.innerText = "詳細データ:\n" + JSON.stringify(data, null, 2);
+                debugInfo.innerText = "詳細ログ:\n" + JSON.stringify(data, null, 2);
                 debugInfo.classList.remove('hidden');
-                throw new Error("画像データが受信できませんでした。");
+                throw new Error("画像が返されませんでした。");
             }
         } catch (e) {
             debugInfo.innerText = e.message;
@@ -129,11 +141,11 @@ document.addEventListener('DOMContentLoaded', () => {
         function resetUI() {
             btn.disabled = false;
             loader.classList.add('hidden');
-            textLabel.innerText = "Imagen 3 で生成する";
+            textLabel.innerText = "Imagen 4 で生成する";
         }
     });
 
-    // その他基本機能
+    // 基本操作 (画像アップロード、テキスト追加、削除、保存)
     document.getElementById('imageUpload').onchange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -151,6 +163,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const t = new fabric.IText('Text Here', { left: 100, top: 100, fontFamily: 'Inter', fill: '#ffffff', fontSize: 100, fontWeight: '900' });
         canvas.add(t).setActiveObject(t);
     };
+
+    document.getElementById('deleteObj').onclick = () => {
+        const o = canvas.getActiveObject();
+        if(o){canvas.remove(o); canvas.discardActiveObject(); canvas.renderAll();}
+    };
+
+    canvas.on('selection:created', (e) => { document.getElementById('deleteObj').classList.remove('hidden'); });
+    canvas.on('selection:cleared', () => { document.getElementById('deleteObj').classList.add('hidden'); });
 
     document.getElementById('downloadBtn').onclick = () => {
         const url = canvas.toDataURL({ format: 'png', multiplier: 2 });
